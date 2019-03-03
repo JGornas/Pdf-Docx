@@ -1,6 +1,11 @@
 from meta_parser import DocParser
 import os
 
+VERSION = 0.8
+
+time = DocParser().get_date()
+print(f">>> Now running: Pdf-Docx {VERSION}\n>>> Today's date: {time}\n\n>\n\n")
+
 for pdf_file in os.listdir("PDF\\"):
     try:
         if pdf_file.endswith(".pdf"):
@@ -12,9 +17,9 @@ for pdf_file in os.listdir("PDF\\"):
                 else:
                     parser.parse_all()  # runs method pack for all parsing
             else:
-                print(f">>> Skip file '{parser.docx_file}' already exists.")
+                print(f">>> Skipping file, already done...")
             parser.clear_temp()
     except:
-        print(f">>> File '{pdf_file}' not parsed, an error occured")
+        print(f">>> File '{pdf_file}' not parsed.\n")
 
 input(f">  Finished!\n>  Press Enter to exit")

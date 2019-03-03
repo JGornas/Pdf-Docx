@@ -6,10 +6,10 @@ import subprocess
 
 
 class DocParser:
-    def __init__(self, pdf_file):
+    def __init__(self, pdf_file=""):
         self.date = self.get_date()
-        self.filename = pdf_file.strip(".pdf")
         self.pdf_file = pdf_file
+        self.filename = pdf_file.strip(".pdf")
         self.txt_file = f"{pdf_file}.txt"
         self.docx_file = f"{self.filename}.docx"
 
@@ -22,9 +22,11 @@ class DocParser:
         self.document = docx.Document(self.template_path)  # creates word document
         self.font = self.document.styles['Normal'].font
         self.font.name = 'Arial'
-        self.oznaczenie_done, self.data_done = False, False
+        self.oznaczenie_done, self.data_done = False, False  # these lock further editing:
         self.woj_done, self.powiat_done, self.gmina_done, self.miejsc_done = False, False, False, False
         self.krs_done, self.nazwa_done, self.regon_done, self.nip_done = False, False, False, False
+
+        self.regon_full, self.nip_full = "", ""
 
     def extract_pdf(self):
         subprocess.call(["C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe", ";",
@@ -37,7 +39,7 @@ class DocParser:
         data = datetime.datetime.now()
         return f"{data.day}.{data.month}.{data.year}"
 
-    def open_txt(self):  # returns string object
+    def open_txt(self):  # returns string object from .txt
         with open(f"txt\\{self.txt_file}", "r", encoding="utf-8") as file:
             self.txt_string = [line.rstrip('\n') for line in file]
 
@@ -71,7 +73,7 @@ class DocParser:
             if line.startswith("Numer KRS"):
                 krs = line.split()[-1]
                 if len(krs) is not 10:
-                    print("!!! INVALID KRS !!!")
+                    print(">!!! INVALID KRS !!!\n")
                     krs = "ERROR"
                 self.krs = krs
             if line.startswith("3.") and not self.nazwa_parsed:
@@ -83,8 +85,14 @@ class DocParser:
                 index = lines.index(line) + 2
                 pola = lines[index]
                 regon, nip = pola.split(",")
-                self.regon = regon.strip("REGON: ")
-                self.nip = nip.strip("  NIP: ")
+                regon = regon.strip("REGON: ")
+                self.regon = regon.split()[0]
+                self.regon_full = regon
+                nip = nip.strip("  NIP: ")
+                self.nip = nip.split()[0]
+                self.nip_full = nip
+
+
 
     def get_txt_string(self):  # debug only
         for counter, line in enumerate(self.txt_string):
@@ -100,7 +108,7 @@ class DocParser:
             f">>> Parsing... '{self.filename}'\n"
             f"> Nazwa sądu: {self.oznaczenie},\n> Województwo: {self.woj}, Powiat: {self.powiat},"
             f" Gmina: {self.gmina}, Miejscowość: {self.miejsc},"
-            f"\n> Firma spółki: {self.nazwa},\n> Numer KRS: {self.krs}, REGON: {self.regon}, NIP: {self.nip}"
+            f"\n> Firma spółki: {self.nazwa},\n> Numer KRS: {self.krs}, REGON: {self.regon_full}, NIP: {self.nip_full}"
         )
 
     def parse_docx(self):
@@ -154,7 +162,7 @@ class DocParser:
             if cell.paragraphs[0].text.startswith("<NIP>") and not self.nip_done:
                 cell.paragraphs[0].text = ""
                 if len(self.nip) is not 10:
-                    print("!!! INVALID NIP WRONG LENGTH !!!")
+                    print(">\n>!!! INVALID NIP !!!\n>")
                 for liczba in self.nip:
                     try:
                         paragraph = cell.paragraphs[0].add_run(liczba)
@@ -168,7 +176,7 @@ class DocParser:
                                 paragraph_space = cell.paragraphs[0].add_run(" ")
                                 paragraph_space.font.size = Pt(2)
                     except ValueError as error:
-                        print(f"Error in NIP: {error}")
+                        cell.paragraphs[0].add_run("")
                 self.nip_done = True
 
             if cell.paragraphs[0].text.startswith("<REGON>") and not self.regon_done:
@@ -202,7 +210,7 @@ class DocParser:
         os.chdir("..\\")
         print(f">>> File '{self.filename}.docx' created successfully! <\n")
 
-    def clear_temp(self):
+    def clear_temp(self):  # removes .txt file
         os.remove(f"txt\\{self.txt_file}")
 
     def parse_all(self):
