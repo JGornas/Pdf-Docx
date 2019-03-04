@@ -13,18 +13,18 @@ class DocParser:
         self.txt_file = f"{pdf_file}.txt"
         self.docx_file = f"{self.filename}.docx"
 
-        self.oznaczenie = self.krs = ""
+        self.txt_string = self.oznaczenie = self.krs = ""
         self.woj = self.powiat = self.gmina = self.miejsc = ""
         self.nazwa = self.regon = self.nip = ""
         self.nazwa_parsed = self.reg_nip_parsed = False
 
         self.template_path = "template.docx"
-        self.document = docx.Document(self.template_path)  # creates word document
+        self.document = docx.Document(self.template_path)  # creates docx document object
         self.font = self.document.styles['Normal'].font
         self.font.name = 'Arial'
-        self.oznaczenie_done = self.data_done = False  # these lock further editing:
-        self.woj_done = self.powiat_done = self.gmina_done = self.miejsc_done = False
-        self.krs_done = self.nazwa_done = self.regon_done = self.nip_done = False
+
+        self.oznaczenie_done = self.woj_done = self.powiat_done = self.gmina_done = self.miejsc_done = False
+        self.krs_done = self.nazwa_done = self.regon_done = self.nip_done = self.data_done = False
 
         self.regon_full = self.nip_full = ""
 
@@ -43,7 +43,13 @@ class DocParser:
         with open(f"txt\\{self.txt_file}", "r", encoding="utf-8") as file:
             self.txt_string = [line.rstrip('\n') for line in file]
 
+    def get_txt_string(self):  # debug only
+        for counter, line in enumerate(self.txt_string):
+            print(counter, line)
+        return self.txt_string
+
     def parse_txt(self):
+        """Loops through the txt file and maps distinct values to the class variables"""
         lines = self.txt_string
         for line in lines:
             if line == "Oznaczenie sądu":
@@ -57,19 +63,16 @@ class DocParser:
                 index = lines.index(line)
                 try:
                     kraj, woj, powiat, gmina, miejsc = lines[index].split(",")
-                    woj = woj.strip("woj. ")
-                    self.woj = woj
-                    powiat = powiat.strip("  powiat ")
-                    self.powiat = powiat
-                    gmina = gmina.strip("  gmina ")
-                    self.gmina = gmina
+                    self.woj = woj.strip("woj. ")
+                    self.powiat = powiat.strip("  powiat ")
+                    self.gmina = gmina.strip("  gmina ")
                     miejsc = miejsc.strip("  miejsc.")
                     self.miejsc = miejsc
                     if miejsc == "":  # checks for a newline
                         index = index + 1
                         self.miejsc = lines[index]
                 except ValueError as error:
-                    print(f"Something's wrong: {error}")
+                    print(f">ERROR: {error}")
             if line.startswith("Numer KRS"):
                 krs = line.split()[-1]
                 if len(krs) is not 10:
@@ -89,13 +92,8 @@ class DocParser:
                 self.regon = regon.split()[0]
                 self.regon_full = regon
                 nip = nip.strip("  NIP: ")
-                self.nip = nip.split()[0]
+                self.nip = nip.split()[0].strip("---")
                 self.nip_full = nip
-
-    def get_txt_string(self):  # debug only
-        for counter, line in enumerate(self.txt_string):
-            print(counter, line)
-        return self.txt_string
 
     def get_parsed_data(self):  # debug only
         return self.krs, self.oznaczenie, self.woj, self.powiat, self.gmina,\
@@ -110,6 +108,8 @@ class DocParser:
         )
 
     def parse_docx(self):
+        """loops through the list of all cells in the document.
+         Looks for a distinct element and inserts the new value in correct paragraph"""
         for cell in self.document.tables[0]._cells:
             if cell.paragraphs[0].text.startswith("1.") and not self.oznaczenie_done:
                 cell.paragraphs[1].style.font.size = Pt(10)
@@ -173,7 +173,7 @@ class DocParser:
                             for i in range(15):
                                 paragraph_space = cell.paragraphs[0].add_run(" ")
                                 paragraph_space.font.size = Pt(2)
-                    except ValueError as error:
+                    except ValueError:
                         cell.paragraphs[0].add_run("")
                 self.nip_done = True
 
@@ -196,7 +196,6 @@ class DocParser:
                     except ValueError:
                         cell.paragraphs[0].add_run("")
                 self.regon_done = True
-
 
         for cell in self.document.tables[2]._cells:
             if cell.paragraphs[0].text.startswith("DZ.MI"):  # and not self.data_done:
@@ -228,4 +227,3 @@ if __name__ == "__main__":  # debug
     parser.parse_txt()
     parser.get_formatted_data()
     parser.parse_docx()
-
