@@ -13,20 +13,20 @@ class DocParser:
         self.txt_file = f"{pdf_file}.txt"
         self.docx_file = f"{self.filename}.docx"
 
-        self.oznaczenie, self.krs = "", ""
-        self.woj, self.powiat, self.gmina, self.miejsc = "", "", "", ""
-        self.nazwa, self.regon, self.nip = "", "", ""
-        self.nazwa_parsed, self.reg_nip_parsed = False, False
+        self.oznaczenie = self.krs = ""
+        self.woj = self.powiat = self.gmina = self.miejsc = ""
+        self.nazwa = self.regon = self.nip = ""
+        self.nazwa_parsed = self.reg_nip_parsed = False
 
         self.template_path = "template.docx"
         self.document = docx.Document(self.template_path)  # creates word document
         self.font = self.document.styles['Normal'].font
         self.font.name = 'Arial'
-        self.oznaczenie_done, self.data_done = False, False  # these lock further editing:
-        self.woj_done, self.powiat_done, self.gmina_done, self.miejsc_done = False, False, False, False
-        self.krs_done, self.nazwa_done, self.regon_done, self.nip_done = False, False, False, False
+        self.oznaczenie_done = self.data_done = False  # these lock further editing:
+        self.woj_done = self.powiat_done = self.gmina_done = self.miejsc_done = False
+        self.krs_done = self.nazwa_done = self.regon_done = self.nip_done = False
 
-        self.regon_full, self.nip_full = "", ""
+        self.regon_full = self.nip_full = ""
 
     def extract_pdf(self):
         subprocess.call(["C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe", ";",
@@ -92,8 +92,6 @@ class DocParser:
                 self.nip = nip.split()[0]
                 self.nip_full = nip
 
-
-
     def get_txt_string(self):  # debug only
         for counter, line in enumerate(self.txt_string):
             print(counter, line)
@@ -141,7 +139,7 @@ class DocParser:
             if cell.paragraphs[0].text.startswith("<KRS>"):
                 cell.paragraphs[0].text = ""
                 if len(self.krs) is not 10:
-                    print("!!! INVALID KRS WRONG LENGTH !!!")
+                    print(">\n>!!! INVALID KRS !!!\n>")
                 for liczba in self.krs:
                     paragraph = cell.paragraphs[0].add_run(liczba)
                     paragraph.font.size = Pt(10)
@@ -167,7 +165,7 @@ class DocParser:
                     try:
                         paragraph = cell.paragraphs[0].add_run(liczba)
                         paragraph.font.size = Pt(10)
-                        if int(liczba) < 5:
+                        if int(liczba) < 5:  # takes care of number formatting
                             for i in range(15):
                                 paragraph_space = cell.paragraphs[0].add_run(" ")
                                 paragraph_space.font.size = Pt(2)
@@ -223,6 +221,11 @@ class DocParser:
 
 
 if __name__ == "__main__":  # debug
-    parser = DocParser("03_Hauni_odpis_aktualny_14.11.2018.pdf")
+    parser = DocParser("..\\example.pdf")
     parser.extract_pdf()
-    parser.parse_all()
+    parser.open_txt()
+    os.remove("example.pdf.txt")
+    parser.parse_txt()
+    parser.get_formatted_data()
+    parser.parse_docx()
+

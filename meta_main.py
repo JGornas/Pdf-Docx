@@ -4,7 +4,7 @@ import os
 VERSION = 0.8
 
 time = DocParser().get_date()
-print(f">>> Now running: Pdf-Docx {VERSION}\n>>> Today's date: {time}\n\n>\n\n")
+print(f">>> Now running: Pdf-Docx {VERSION}\n>>> Today's date: {time}\n\n>\n")
 
 for pdf_file in os.listdir("PDF\\"):
     try:
