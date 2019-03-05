@@ -7,6 +7,7 @@ import subprocess
 
 class DocParser:
     def __init__(self, pdf_file=""):
+        self.data = datetime.datetime.now()
         self.date = self.get_date()
         self.pdf_file = pdf_file
         self.filename = pdf_file.strip(".pdf")
@@ -17,6 +18,8 @@ class DocParser:
         self.woj = self.powiat = self.gmina = self.miejsc = ""
         self.nazwa = self.regon = self.nip = ""
         self.nazwa_parsed = self.reg_nip_parsed = False
+
+        self.logfile = docx.Document()
 
         self.template_path = "template.docx"
         self.document = docx.Document(self.template_path)  # creates docx document object
@@ -36,8 +39,7 @@ class DocParser:
         print(f"\n>>> Extracting text from '{self.pdf_file}'")
 
     def get_date(self):
-        data = datetime.datetime.now()
-        return f"{data.day}.{data.month}.{data.year}"
+        return f"{self.data.day}.{self.data.month}.{self.data.year}"
 
     def open_txt(self):  # returns string object from .txt
         with open(f"txt\\{self.txt_file}", "r", encoding="utf-8") as file:
@@ -72,7 +74,7 @@ class DocParser:
                         index = index + 1
                         self.miejsc = lines[index]
                 except ValueError as error:
-                    print(f">ERROR: {error}")
+                    print(f">Unknown error:: {error}")
             if line.startswith("Numer KRS"):
                 krs = line.split()[-1]
                 if len(krs) is not 10:
@@ -106,6 +108,20 @@ class DocParser:
             f" Gmina: {self.gmina}, Miejscowość: {self.miejsc},"
             f"\n> Firma spółki: {self.nazwa},\n> Numer KRS: {self.krs}, REGON: {self.regon_full}, NIP: {self.nip_full}"
         )
+
+    def create_logfile(self):
+        time = f"{self.data.hour}:{self.data.minute}:{self.data.second}\n" \
+            f"{self.data.day}.{self.data.month}.{self.data.year}\n"
+        self.logfile.add_paragraph(
+            f"{self.docx_file} LOGFILE: \n\n{time}\n"
+            f"Numer KRS: {self.krs}\nNazwa sądu: {self.oznaczenie}\nWojewództwo: {self.woj}\n"
+            f"Powiat: {self.powiat}\nGmina: {self.gmina}\n"
+            f"Miejscowość: {self.miejsc}\nFirma spółki: {self.nazwa}\n"
+            f"REGON: {self.regon_full}\nNIP: {self.nip_full}"
+        )
+    def save_logfile(self):
+        self.logfile.save(f"logs\\{self.filename}_log.docx")
+        print(">>> Logfile created!")
 
     def parse_docx(self):
         """loops through the list of all cells in the document.
@@ -207,6 +223,7 @@ class DocParser:
         os.chdir("..\\")
         print(f">>> File '{self.filename}.docx' created successfully! <\n")
 
+
     def clear_temp(self):  # removes .txt file
         os.remove(f"txt\\{self.txt_file}")
 
@@ -216,6 +233,8 @@ class DocParser:
         self.parse_txt()  # parses temp text file
         self.get_formatted_data()  # console info
         self.parse_docx()  # inserts data into docx document
+        self.create_logfile()
+        self.save_logfile()
         self.save_docx()  # saves the .docx document
 
 
@@ -227,3 +246,5 @@ if __name__ == "__main__":  # debug
     parser.parse_txt()
     parser.get_formatted_data()
     parser.parse_docx()
+    parser.create_logfile()
+    parser.save_logfile()
