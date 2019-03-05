@@ -119,8 +119,9 @@ class DocParser:
             f"Miejscowość: {self.miejsc}\nFirma spółki: {self.nazwa}\n"
             f"REGON: {self.regon_full}\nNIP: {self.nip_full}"
         )
+
     def save_logfile(self):
-        self.logfile.save(f"logs\\{self.filename}_log.docx")
+        self.logfile.save(f"logs\\LOG_{self.filename}.docx")
         print(">>> Logfile created!")
 
     def parse_docx(self):
