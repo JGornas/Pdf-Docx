@@ -7,7 +7,7 @@ import subprocess
 
 class DocParser:
     def __init__(self, pdf_file=""):
-        self.data = datetime.datetime.now()
+        self.data = datetime.datetime.now()  # date object
         self.date = self.get_date()
         self.pdf_file = pdf_file
         self.filename = pdf_file.strip(".pdf")
@@ -35,7 +35,7 @@ class DocParser:
         subprocess.call(["C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe", ";",
                          "venv\\Scripts\\python.exe",
                          "venv\\Scripts\\pdf2txt.py",
-                         f"'PDF\\{self.pdf_file}' -o 'txt\\{self.pdf_file}.txt'"])
+                         f"'pdf\\{self.pdf_file}' -o 'txt\\{self.pdf_file}.txt'"])
         print(f"\n>>> Extracting text from '{self.pdf_file}'")
 
     def get_date(self):
@@ -78,7 +78,7 @@ class DocParser:
             if line.startswith("Numer KRS"):
                 krs = line.split()[-1]
                 if len(krs) is not 10:
-                    print(">!!! INVALID KRS !!!\n")
+                    print(">>>!!! INVALID KRS !!!")
                     krs = "ERROR"
                 self.krs = krs
             if line.startswith("3.") and not self.nazwa_parsed:
@@ -121,7 +121,7 @@ class DocParser:
         )
 
     def save_logfile(self):
-        self.logfile.save(f"logs\\LOG_{self.filename}.docx")
+        self.logfile.save(f"logs\\LOG-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.filename}.docx")
         print(">>> Logfile created!")
 
     def parse_docx(self):
@@ -156,7 +156,7 @@ class DocParser:
             if cell.paragraphs[0].text.startswith("<KRS>"):
                 cell.paragraphs[0].text = ""
                 if len(self.krs) is not 10:
-                    print(">\n>!!! INVALID KRS !!!\n>")
+                    print("> !!! INVALID KRS !!!")
                 for liczba in self.krs:
                     paragraph = cell.paragraphs[0].add_run(liczba)
                     paragraph.font.size = Pt(10)
@@ -177,7 +177,7 @@ class DocParser:
             if cell.paragraphs[0].text.startswith("<NIP>") and not self.nip_done:
                 cell.paragraphs[0].text = ""
                 if len(self.nip) is not 10:
-                    print(">\n>!!! INVALID NIP !!!\n>")
+                    print("> !!! INVALID NIP !!!")
                 for liczba in self.nip:
                     try:
                         paragraph = cell.paragraphs[0].add_run(liczba)
@@ -197,12 +197,12 @@ class DocParser:
             if cell.paragraphs[0].text.startswith("<REGON>") and not self.regon_done:
                 cell.paragraphs[0].text = ""
                 if len(self.regon) is not 9:
-                    print(">\n>!!! INVALID REGON !!!\n>")
+                    print("> !!! INVALID REGON !!!")
                 for liczba in self.regon:
                     try:
                         paragraph = cell.paragraphs[0].add_run(liczba)
                         paragraph.font.size = Pt(10)
-                        if int(liczba) < 5:
+                        if int(liczba) < 5:  # this block controls the number of whitespaces between numbers
                             for i in range(15):
                                 paragraph_space = cell.paragraphs[0].add_run(" ")
                                 paragraph_space.font.size = Pt(2)
@@ -219,11 +219,10 @@ class DocParser:
                 cell.paragraphs[0].text = self.date
 
     def save_docx(self):
-        os.chdir("DOCX\\")
+        os.chdir("docx\\")
         self.document.save(f"{self.filename}.docx")
         os.chdir("..\\")
         print(f">>> File '{self.filename}.docx' created successfully! <\n")
-
 
     def clear_temp(self):  # removes .txt file
         os.remove(f"txt\\{self.txt_file}")
@@ -234,16 +233,16 @@ class DocParser:
         self.parse_txt()  # parses temp text file
         self.get_formatted_data()  # console info
         self.parse_docx()  # inserts data into docx document
-        self.create_logfile()
-        self.save_logfile()
+        self.create_logfile()  # create log object
+        self.save_logfile()  # saves log object to a file
         self.save_docx()  # saves the .docx document
 
 
 if __name__ == "__main__":  # debug
-    parser = DocParser("..\\example.pdf")
+    parser = DocParser("odpis_aktualny_1.pdf")
     parser.extract_pdf()
     parser.open_txt()
-    os.remove("example.pdf.txt")
+    os.remove("txt\\odpis_aktualny_1.pdf.txt")
     parser.parse_txt()
     parser.get_formatted_data()
     parser.parse_docx()
