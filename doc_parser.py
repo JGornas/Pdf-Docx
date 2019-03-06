@@ -121,7 +121,8 @@ class DocParser:
         )
 
     def save_logfile(self):
-        self.logfile.save(f"logs\\LOG-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.filename}.docx")
+        self.logfile.save(f"logs\\({self.data.day}-{self.data.month}-{self.data.year})"
+                          f"-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.filename}.docx")
         print(">>> Logfile created!")
 
     def parse_docx(self):
