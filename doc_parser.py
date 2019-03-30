@@ -1,19 +1,22 @@
 import docx
 from docx.shared import Pt
 import os
-import datetime
-import subprocess
+from datetime import datetime
+from subprocess import call
 
 
 class DocParser:
     def __init__(self, pdf_file=""):
-        self.data = datetime.datetime.now()  # date object
-        self.date = self.get_date()
+        self.data = datetime.now()  # date object
+        self.date = f"{self.data.day}.{self.data.month}.{self.data.year}"
+        self.time = f"{self.data.hour}:{self.data.minute}:{self.data.second}"
+
         self.pdf_file = pdf_file
         self.filename = pdf_file.strip(".pdf")
         self.txt_file = f"{pdf_file}.txt"
         self.docx_file = f"{self.filename}.docx"
 
+        """Variables for pdf parsing. Names are after searched fields in the file."""
         self.txt_string = self.oznaczenie = self.krs = ""
         self.woj = self.powiat = self.gmina = self.miejsc = ""
         self.nazwa = self.regon = self.nip = ""
@@ -21,31 +24,30 @@ class DocParser:
 
         self.logfile = docx.Document()
 
+        """All variables will be parsed through the template document."""
         self.template_path = "template.docx"
-        self.document = docx.Document(self.template_path)  # creates docx document object
+        self.document = docx.Document(self.template_path)
         self.font = self.document.styles['Normal'].font
         self.font.name = 'Arial'
 
+        """Locks the cell in the document after parsing."""
         self.oznaczenie_done = self.woj_done = self.powiat_done = self.gmina_done = self.miejsc_done = False
         self.krs_done = self.nazwa_done = self.regon_done = self.nip_done = self.data_done = False
 
-        self.regon_full = self.nip_full = ""
+        self.regon_full = self.nip_full = ""  # bugfix
 
     def extract_pdf(self):
-        subprocess.call(["C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe", ";",
-                         "venv\\Scripts\\python.exe",
-                         "venv\\Scripts\\pdf2txt.py",
-                         f"'pdf\\{self.pdf_file}' -o 'txt\\{self.pdf_file}.txt'"])
+        call([os.path.join("venv", "Scripts", "python.exe"),
+              os.path.join("venv", "Scripts", "pdf2txt.py"),
+              os.path.join("pdf", f"{self.pdf_file}"),
+              os.path.join(f"-otxt", f"{self.txt_file}")])
         print(f"\n>>> Extracting text from '{self.pdf_file}'")
 
-    def get_date(self):
-        return f"{self.data.day}.{self.data.month}.{self.data.year}"
-
-    def open_txt(self):  # returns string object from .txt
-        with open(f"txt\\{self.txt_file}", "r", encoding="utf-8") as file:
+    def open_txt(self):  # Initiates the string object from the txt file.
+        with open(os.path.join("txt", f"{self.txt_file}"), "r", encoding="utf-8") as file:
             self.txt_string = [line.rstrip('\n') for line in file]
 
-    def get_txt_string(self):  # debug only
+    def get_txt_string(self):  # Debug only; for connecting correct paragraphs from the txt object.
         for counter, line in enumerate(self.txt_string):
             print(counter, line)
         return self.txt_string
@@ -58,7 +60,7 @@ class DocParser:
                 index = lines.index(line) + 4
                 oznaczenie = lines[index]
                 check = lines[index + 1]
-                if check is not "":  # checks for a newline
+                if check is not "":  # checks for a newline (bugfix)
                     oznaczenie += f" {check}"
                 self.oznaczenie = oznaczenie
             if line.startswith("kraj "):
@@ -73,13 +75,13 @@ class DocParser:
                     if miejsc == "":  # checks for a newline
                         index = index + 1
                         self.miejsc = lines[index]
-                except ValueError as error:
+                except ValueError as error:  # this should be in tests :/
                     print(f">Unknown error:: {error}")
             if line.startswith("Numer KRS"):
                 krs = line.split()[-1]
                 if len(krs) is not 10:
                     print(">>>!!! INVALID KRS !!!")
-                    krs = "ERROR"
+                    krs = "ERROR"  # This cannot be invalid, user alarm.
                 self.krs = krs
             if line.startswith("3.") and not self.nazwa_parsed:
                 self.nazwa_parsed = True
@@ -97,11 +99,7 @@ class DocParser:
                 self.nip = nip.split()[0].strip("---")
                 self.nip_full = nip
 
-    def get_parsed_data(self):  # debug only
-        return self.krs, self.oznaczenie, self.woj, self.powiat, self.gmina,\
-               self.miejsc, self.nazwa, self.regon, self.nip
-
-    def get_formatted_data(self):
+    def print_formatted_data(self):
         print(
             f">>> Parsing... '{self.filename}'\n"
             f"> Nazwa sądu: {self.oznaczenie},\n> Województwo: {self.woj}, Powiat: {self.powiat},"
@@ -110,10 +108,8 @@ class DocParser:
         )
 
     def create_logfile(self):
-        time = f"{self.data.hour}:{self.data.minute}:{self.data.second}\n" \
-            f"{self.data.day}.{self.data.month}.{self.data.year}\n"
         self.logfile.add_paragraph(
-            f"{self.docx_file} LOGFILE: \n\n{time}\n"
+            f"{self.docx_file} LOGFILE: \n\n{self.time}\n{self.date}\n\n"
             f"Numer KRS: {self.krs}\nNazwa sądu: {self.oznaczenie}\nWojewództwo: {self.woj}\n"
             f"Powiat: {self.powiat}\nGmina: {self.gmina}\n"
             f"Miejscowość: {self.miejsc}\nFirma spółki: {self.nazwa}\n"
@@ -121,13 +117,13 @@ class DocParser:
         )
 
     def save_logfile(self):
-        self.logfile.save(f"logs\\({self.data.day}-{self.data.month}-{self.data.year})"
-                          f"-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.filename}.docx")
+        self.logfile.save(os.path.join("logs", f"({self.data.day}-{self.data.month}-{self.data.year})"
+                          f"-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.filename}.docx"))
         print(">>> Logfile created!")
 
     def parse_docx(self):
         """loops through the list of all cells in the document.
-         Looks for a distinct element and inserts the new value in correct paragraph"""
+         Looks for a variable name and inserts the new value in a paragraph"""
         for cell in self.document.tables[0]._cells:
             if cell.paragraphs[0].text.startswith("1.") and not self.oznaczenie_done:
                 cell.paragraphs[1].style.font.size = Pt(10)
@@ -220,19 +216,19 @@ class DocParser:
                 cell.paragraphs[0].text = self.date
 
     def save_docx(self):
-        os.chdir("docx\\")
+        os.chdir(os.path.join("docx", ""))
         self.document.save(f"{self.filename}.docx")
-        os.chdir("..\\")
+        os.chdir(os.path.join("..", ""))
         print(f">>> File '{self.filename}.docx' created successfully! <\n")
 
     def clear_temp(self):  # removes .txt file
-        os.remove(f"txt\\{self.txt_file}")
+        os.remove(os.path.join("txt", f"{self.txt_file}"))
 
     def parse_all(self):
         #  self.extract_pdf()  # extracts unicode text from pdf file
         self.open_txt()  # initiates temp text file
         self.parse_txt()  # parses temp text file
-        self.get_formatted_data()  # console info
+        self.print_formatted_data()  # console info
         self.parse_docx()  # inserts data into docx document
         self.create_logfile()  # create log object
         self.save_logfile()  # saves log object to a file
@@ -243,9 +239,9 @@ if __name__ == "__main__":  # debug
     parser = DocParser("odpis_aktualny_1.pdf")
     parser.extract_pdf()
     parser.open_txt()
-    os.remove("txt\\odpis_aktualny_1.pdf.txt")
+    parser.clear_temp()
     parser.parse_txt()
-    parser.get_formatted_data()
+    parser.print_formatted_data()
     parser.parse_docx()
     parser.create_logfile()
     parser.save_logfile()
