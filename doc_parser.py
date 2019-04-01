@@ -11,12 +11,12 @@ class DocParser:
         self.date = f"{self.data.day}.{self.data.month}.{self.data.year}"
         self.time = f"{self.data.hour}:{self.data.minute}:{self.data.second}"
 
-        self.pdf_file = pdf_file
         self.filename = pdf_file.strip(".pdf")
-        self.txt_file = f"{pdf_file}.txt"
-        self.docx_file = f"{self.filename}.docx"
+        self.pdf_filename = pdf_file
+        self.txt_filename = f"{self.filename}.txt"
+        self.docx_filename = f"{self.filename}.docx"
 
-        """Variables for pdf parsing. Names are after searched fields in the file."""
+        """Variables for pdf parsing. Names are after searched fields in the file."""  # init as a dictionary mabye?
         self.txt_string = self.oznaczenie = self.krs = ""
         self.woj = self.powiat = self.gmina = self.miejsc = ""
         self.nazwa = self.regon = self.nip = ""
@@ -30,7 +30,7 @@ class DocParser:
         self.font = self.document.styles['Normal'].font
         self.font.name = 'Arial'
 
-        """Locks the cell in the document after parsing."""
+        """Locks the cell in the document after parsing."""  # dict?
         self.oznaczenie_done = self.woj_done = self.powiat_done = self.gmina_done = self.miejsc_done = False
         self.krs_done = self.nazwa_done = self.regon_done = self.nip_done = self.data_done = False
 
@@ -39,12 +39,12 @@ class DocParser:
     def extract_pdf(self):
         call([os.path.join("venv", "Scripts", "python.exe"),
               os.path.join("venv", "Scripts", "pdf2txt.py"),
-              os.path.join("pdf", f"{self.pdf_file}"),
-              os.path.join(f"-otxt", f"{self.txt_file}")])
-        print(f"\n>>> Extracting text from '{self.pdf_file}'")
+              os.path.join("pdf", f"{self.pdf_filename}"),
+              os.path.join(f"-otxt", f"{self.txt_filename}")])
+        print(f"\n>>> Extracting text from '{self.pdf_filename}'")
 
     def open_txt(self):  # Initiates the string object from the txt file.
-        with open(os.path.join("txt", f"{self.txt_file}"), "r", encoding="utf-8") as file:
+        with open(os.path.join("txt", f"{self.txt_filename}"), "r", encoding="utf-8") as file:
             self.txt_string = [line.rstrip('\n') for line in file]
 
     def get_txt_string(self):  # Debug only; for connecting correct paragraphs from the txt object.
@@ -109,7 +109,7 @@ class DocParser:
 
     def create_logfile(self):
         self.logfile.add_paragraph(
-            f"{self.docx_file} LOGFILE: \n\n{self.time}\n{self.date}\n\n"
+            f"{self.docx_filename} LOGFILE: \n\n{self.time}\n{self.date}\n\n"
             f"Numer KRS: {self.krs}\nNazwa sądu: {self.oznaczenie}\nWojewództwo: {self.woj}\n"
             f"Powiat: {self.powiat}\nGmina: {self.gmina}\n"
             f"Miejscowość: {self.miejsc}\nFirma spółki: {self.nazwa}\n"
@@ -118,111 +118,109 @@ class DocParser:
 
     def save_logfile(self):
         self.logfile.save(os.path.join("logs", f"({self.data.day}-{self.data.month}-{self.data.year})"
-                          f"-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.filename}.docx"))
+                          f"-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.docx_filename}"))
         print(">>> Logfile created!")
 
     def parse_docx(self):
         """loops through the list of all cells in the document.
          Looks for a variable name and inserts the new value in a paragraph"""
-        for cell in self.document.tables[0]._cells:
-            if cell.paragraphs[0].text.startswith("1.") and not self.oznaczenie_done:
-                cell.paragraphs[1].style.font.size = Pt(10)
-                cell.paragraphs[1].text = self.oznaczenie
-                self.oznaczenie_done = True
+        for table in range(len(self.document.tables)):
+            try:
+                for cell in self.document.tables[table]._cells:
+                    if cell.paragraphs[0].text.startswith("1.") and not self.oznaczenie_done:
+                        cell.paragraphs[1].style.font.size = Pt(10)
+                        cell.paragraphs[1].text = self.oznaczenie
+                        self.oznaczenie_done = True
 
-            if cell.paragraphs[0].text.startswith("2.") and not self.woj_done:
-                cell.paragraphs[1].style.font.size = Pt(10)
-                cell.paragraphs[1].text = self.woj
-                self.woj_done = True
+                    if cell.paragraphs[0].text.startswith("2.") and not self.woj_done:
+                        cell.paragraphs[1].style.font.size = Pt(10)
+                        cell.paragraphs[1].text = self.woj
+                        self.woj_done = True
 
-            if cell.paragraphs[0].text.startswith("3.") and not self.powiat_done:
-                cell.paragraphs[1].style.font.size = Pt(10)
-                cell.paragraphs[1].text = self.powiat
-                self.powiat_done = True
+                    if cell.paragraphs[0].text.startswith("3.") and not self.powiat_done:
+                        cell.paragraphs[1].style.font.size = Pt(10)
+                        cell.paragraphs[1].text = self.powiat
+                        self.powiat_done = True
 
-            if cell.paragraphs[0].text.startswith("4.") and not self.gmina_done:
-                cell.paragraphs[1].style.font.size = Pt(10)
-                cell.paragraphs[1].text = self.gmina
-                self.gmina_done = True
+                    if cell.paragraphs[0].text.startswith("4.") and not self.gmina_done:
+                        cell.paragraphs[1].style.font.size = Pt(10)
+                        cell.paragraphs[1].text = self.gmina
+                        self.gmina_done = True
 
-            if cell.paragraphs[0].text.startswith("5.") and not self.miejsc_done:
-                cell.paragraphs[1].style.font.size = Pt(10)
-                cell.paragraphs[1].text = self.miejsc
-                self.miejsc_done = True
+                    if cell.paragraphs[0].text.startswith("5.") and not self.miejsc_done:
+                        cell.paragraphs[1].style.font.size = Pt(10)
+                        cell.paragraphs[1].text = self.miejsc
+                        self.miejsc_done = True
 
-            if cell.paragraphs[0].text.startswith("<KRS>"):
-                cell.paragraphs[0].text = ""
-                if len(self.krs) is not 10:
-                    print("> !!! INVALID KRS !!!")
-                for liczba in self.krs:
-                    paragraph = cell.paragraphs[0].add_run(liczba)
-                    paragraph.font.size = Pt(10)
-                    if int(liczba) < 5:
-                        for i in range(15):
-                            paragraph_space = cell.paragraphs[0].add_run(" ")
-                            paragraph_space.font.size = Pt(2)
-                    else:
-                        for i in range(16):
-                            paragraph_space = cell.paragraphs[0].add_run(" ")
-                            paragraph_space.font.size = Pt(2)
+                    if cell.paragraphs[0].text.startswith("<KRS>"):
+                        cell.paragraphs[0].text = ""
+                        if len(self.krs) is not 10:
+                            print("> !!! INVALID KRS !!!")
+                        for liczba in self.krs:
+                            paragraph = cell.paragraphs[0].add_run(liczba)
+                            paragraph.font.size = Pt(10)
+                            if int(liczba) < 5:
+                                for i in range(15):
+                                    paragraph_space = cell.paragraphs[0].add_run(" ")
+                                    paragraph_space.font.size = Pt(2)
+                            else:
+                                for i in range(16):
+                                    paragraph_space = cell.paragraphs[0].add_run(" ")
+                                    paragraph_space.font.size = Pt(2)
 
-            if cell.paragraphs[0].text.startswith("8.") and not self.nazwa_done:
-                cell.paragraphs[1].style.font.size = Pt(10)
-                cell.paragraphs[1].text = f"   {self.nazwa}"
-                self.nazwa_done = True
+                    if cell.paragraphs[0].text.startswith("8.") and not self.nazwa_done:
+                        cell.paragraphs[1].style.font.size = Pt(10)
+                        cell.paragraphs[1].text = f"   {self.nazwa}"
+                        self.nazwa_done = True
 
-            if cell.paragraphs[0].text.startswith("<NIP>") and not self.nip_done:
-                cell.paragraphs[0].text = ""
-                if len(self.nip) is not 10:
-                    print("> !!! INVALID NIP !!!")
-                for liczba in self.nip:
-                    try:
-                        paragraph = cell.paragraphs[0].add_run(liczba)
-                        paragraph.font.size = Pt(10)
-                        if int(liczba) < 5:  # takes care of number formatting
-                            for i in range(15):
-                                paragraph_space = cell.paragraphs[0].add_run(" ")
-                                paragraph_space.font.size = Pt(2)
-                        else:
-                            for i in range(15):
-                                paragraph_space = cell.paragraphs[0].add_run(" ")
-                                paragraph_space.font.size = Pt(2)
-                    except ValueError:
-                        cell.paragraphs[0].add_run("")
-                self.nip_done = True
+                    if cell.paragraphs[0].text.startswith("<NIP>") and not self.nip_done:
+                        cell.paragraphs[0].text = ""
+                        if len(self.nip) is not 10:
+                            print("> !!! INVALID NIP !!!")
+                            self.nip = "               "
+                        for liczba in self.nip:
+                            try:
+                                paragraph = cell.paragraphs[0].add_run(liczba)
+                                paragraph.font.size = Pt(10)
+                                for i in range(15):
+                                    paragraph_space = cell.paragraphs[0].add_run(" ")
+                                    paragraph_space.font.size = Pt(2)
+                            except ValueError:
+                                cell.paragraphs[0].add_run("")
+                        self.nip_done = True
 
-            if cell.paragraphs[0].text.startswith("<REGON>") and not self.regon_done:
-                cell.paragraphs[0].text = ""
-                if len(self.regon) is not 9:
-                    print("> !!! INVALID REGON !!!")
-                for liczba in self.regon:
-                    try:
-                        paragraph = cell.paragraphs[0].add_run(liczba)
-                        paragraph.font.size = Pt(10)
-                        if int(liczba) < 5:  # this block controls the number of whitespaces between numbers
-                            for i in range(15):
-                                paragraph_space = cell.paragraphs[0].add_run(" ")
-                                paragraph_space.font.size = Pt(2)
-                        else:
-                            for i in range(16):
-                                paragraph_space = cell.paragraphs[0].add_run(" ")
-                                paragraph_space.font.size = Pt(2)
-                    except ValueError:
-                        cell.paragraphs[0].add_run("")
-                self.regon_done = True
-
-        for cell in self.document.tables[2]._cells:
-            if cell.paragraphs[0].text.startswith("DZ.MI"):  # and not self.data_done:
-                cell.paragraphs[0].text = self.date
+                    if cell.paragraphs[0].text.startswith("<REGON>") and not self.regon_done:
+                        cell.paragraphs[0].text = ""
+                        if len(self.regon) is not 9:
+                            print("> !!! INVALID REGON !!!")
+                        for liczba in self.regon:
+                            try:
+                                paragraph = cell.paragraphs[0].add_run(liczba)
+                                paragraph.font.size = Pt(10)
+                                if int(liczba) < 5:  # this block controls the number of whitespaces between numbers
+                                    for i in range(15):
+                                        paragraph_space = cell.paragraphs[0].add_run(" ")
+                                        paragraph_space.font.size = Pt(2)
+                                else:
+                                    for i in range(16):
+                                        paragraph_space = cell.paragraphs[0].add_run(" ")
+                                        paragraph_space.font.size = Pt(2)
+                            except ValueError:
+                                cell.paragraphs[0].add_run("")
+                        self.regon_done = True
+                    if cell.paragraphs[0].text.startswith("DZ.MI"):
+                        cell.paragraphs[0].text = self.date
+            except IndexError:
+                pass
 
     def save_docx(self):
         os.chdir(os.path.join("docx", ""))
-        self.document.save(f"{self.filename}.docx")
+        self.document.save(self.docx_filename)
         os.chdir(os.path.join("..", ""))
-        print(f">>> File '{self.filename}.docx' created successfully! <\n")
+        print(f">>> File '{self.docx_filename}' created successfully! <\n")
 
     def clear_temp(self):  # removes .txt file
-        os.remove(os.path.join("txt", f"{self.txt_file}"))
+        os.remove(os.path.join("txt", f"{self.txt_filename}"))
 
     def parse_all(self):
         #  self.extract_pdf()  # extracts unicode text from pdf file
@@ -243,5 +241,7 @@ if __name__ == "__main__":  # debug
     parser.parse_txt()
     parser.print_formatted_data()
     parser.parse_docx()
+    parser.save_docx()
     parser.create_logfile()
     parser.save_logfile()
+
