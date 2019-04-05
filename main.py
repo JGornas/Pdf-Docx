@@ -4,7 +4,7 @@ import os
 VERSION = 1.0
 
 
-print(f">>> Now running: Pdf-Docx {VERSION}\n")
+print(f">>> Now running: Pdf-Docx {VERSION}\n ")
 
 for pdf_file in os.listdir("pdf\\"):
     try:

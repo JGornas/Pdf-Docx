@@ -1,7 +1,7 @@
-import docx
-from docx.shared import Pt
 import os
 from datetime import datetime
+import docx
+from docx.shared import Pt
 from subprocess import call
 
 
@@ -237,7 +237,7 @@ if __name__ == "__main__":  # debug
     parser = DocParser("odpis_aktualny_1.pdf")
     parser.extract_pdf()
     parser.open_txt()
-    parser.clear_temp()
+    # parser.clear_temp()
     parser.parse_txt()
     parser.print_formatted_data()
     parser.parse_docx()
