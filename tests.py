@@ -7,7 +7,8 @@ class TestPdfParser(unittest.TestCase):
     def test_pdf_1(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_1.pdf"
-        datafields = parser.load_pdf(remove_txt=False, debug=False)
+        parser.load_pdf(remove_txt=False, debug=False)
+        datafields = parser.parse_paragraphs()
         self.assertEqual(datafields["Firma, pod którą spółka działa"],
                          "MODELARNIA SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ")
         self.assertEqual(datafields["Oznaczenie sądu"],

@@ -46,8 +46,17 @@ class PdfParser:
             self.datafields[cell_name] = self.paragraphs[index]
         self.parsed_state[cell_name] = True
 
-    def search_byloop(self):
-        pass
+    def search_byloop(self, pattern, parent, cell_name, paragraph):
+        index = self.paragraphs.index(paragraph)
+        self.paragraphs[index] = "parsed"
+        while True:
+            index += 1
+            if re.match(pattern, self.paragraphs[index]):
+                self.datafields[f"{parent} {self.active}"][cell_name] = self.paragraphs[index].rstrip()
+                self.paragraphs[index] = "parsed"
+                break
+            if index == len(self.paragraphs):
+                break
 
     def load_pdf(self, remove_txt=True, debug=False, debug_range=(0, 500)):
         call([os.path.join("venv", "Scripts", "python.exe"),
@@ -63,6 +72,9 @@ class PdfParser:
                 if debug_range[0] < counter < debug_range[1]:
                     print(counter, paragraph)
         self.paragraphs = paragraphs
+
+    def parse_paragraphs(self):
+        paragraphs = self.paragraphs
         for paragraph in paragraphs:
             if paragraph == "Oznaczenie sądu" and self.parsed_state["Oznaczenie sądu"] is False:
                 self.search_byindex(4, "Oznaczenie sądu", paragraph)
@@ -89,55 +101,27 @@ class PdfParser:
             if paragraph.startswith("1.Wysokość kapitału zakładowego"):
                 self.search_byindex(2, "Kapitał Zakładowy", paragraph)
 
-            if paragraph.startswith("1.Nazwisko / Nazwa lub firma"):
+            if paragraph.startswith("Rubryka 7 - Dane wspólników"):
                 self.parsed_state["Wspólnicy"] = True
+
+            if paragraph.startswith("1.Nazwisko / Nazwa lub firma"):
                 self.active += 1
                 self.datafields[f"Wspólnik {self.active}"] = {}
-                pattern = r"^[A-Z\u00D3\u0104\u0106\u0141\u0143\u015A\u0179\u017B]+"
-                index = paragraphs.index(paragraph)
-                paragraphs[index] = "parsed"
-                while True:
-                    index += 1
-                    if re.match(pattern, paragraphs[index]):
-                        self.datafields[f"Wspólnik {self.active}"]["Nazwisko/Nazwa"] = paragraphs[index].rstrip()
-                        break
+
+                pattern = rf"^[A-Z{self.unicode}]+"
+                self.search_byloop(pattern, "Wspólnik", "Nazwisko/Nazwa", paragraph)
 
             if paragraph.startswith("2.Imiona") and self.parsed_state["Wspólnicy"]:
                 pattern = rf"[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
-                index = paragraphs.index(paragraph)
-                paragraphs[index] = "parsed"
-                while True:
-                    index += 1
-                    if re.match(pattern, paragraphs[index]):
-                        self.datafields[f"Wspólnik {self.active}"]["Imiona"] = paragraphs[index].rstrip()
-                        paragraphs[index] = "parsed"
-                        break
+                self.search_byloop(pattern, "Wspólnik", "Imiona", paragraph)
 
             if paragraph.startswith("3.Numer PESEL/REGON") and self.parsed_state["Wspólnicy"]:
                 pattern = r"[-]+|[0-9]{9,11}"
-                index = paragraphs.index(paragraph)
-                paragraphs[index] = "parsed"
-                while True:
-                    index += 1
-                    if re.match(pattern, paragraphs[index]):
-                        self.datafields[f"Wspólnik {self.active}"]["PESEL/REGON"] = paragraphs[index].rstrip()
-                        paragraphs[index] = "parsed"
-                        break
-                    if index == len(paragraphs):
-                        break
+                self.search_byloop(pattern, "Wspólnik", "PESEL/REGON", paragraph)
 
             if paragraph.startswith("4.Numer KRS") and self.parsed_state["Wspólnicy"]:
                 pattern = r"[-]+|[*]+|[0-9]{10}$"
-                index = paragraphs.index(paragraph)
-                paragraphs[index] = "parsed"
-                while True:
-                    index += 1
-                    if re.match(pattern, paragraphs[index]):
-                        self.datafields[f"Wspólnik {self.active}"]["KRS"] = paragraphs[index].rstrip()
-                        paragraphs[index] = "parsed"
-                        break
-                    if index == len(paragraphs):
-                        break
+                self.search_byloop(pattern, "Wspólnik", "KRS", paragraph)
 
             if paragraph.startswith("5.Posiadane przez wspólnika udziały"):
                 index = paragraphs.index(paragraph)
@@ -147,6 +131,7 @@ class PdfParser:
                     self.datafields[f"Wspólnik {self.active}"]["Udziały"] = f"{line_1} {line_2}"
                 else:
                     self.datafields[f"Wspólnik {self.active}"]["Udziały"] = f"{line_1}"
+
             if paragraph == "ZARZĄD":
                 self.parsed_state["Wspólnicy"] = False
                 self.parsed_state["Zarząd"] = True
@@ -156,24 +141,11 @@ class PdfParser:
                 self.active += 1
                 self.datafields[f"Zarząd {self.active}"] = {}
                 pattern = r"^[A-Z\u00D3\u0104\u0106\u0141\u0143\u015A\u0179\u017B]+"
-                index = paragraphs.index(paragraph)
-                paragraphs[index] = "parsed"
-                while True:
-                    index += 1
-                    if re.match(pattern, paragraphs[index].rstrip()):
-                        self.datafields[f"Zarząd {self.active}"]["Nazwisko/Nazwa"] = paragraphs[index].rstrip()
-                        break
+                self.search_byloop(pattern, "Zarząd", "Nazwisko/Nazwa", paragraph)
 
             if paragraph.startswith("2.Imiona") and self.parsed_state["Zarząd"]:
                 pattern = rf"^[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
-                index = paragraphs.index(paragraph)
-                paragraphs[index] = "parsed"
-                while True:
-                    if re.match(pattern, paragraphs[index].rstrip()):
-                        self.datafields[f"Zarząd {self.active}"]["Imiona"] = paragraphs[index].rstrip()
-                        paragraphs[index] = "parsed"
-                        break
-                    index += 1
+                self.search_byloop(pattern, "Zarząd", "Imiona", paragraph)
 
             if paragraph.startswith("5.Funkcja w organie ") and self.parsed_state["Zarząd"]:
                 paragraph = paragraph.strip("5.Funkcja w organie reprezentującym ")
@@ -186,7 +158,8 @@ class PdfParser:
 
 if __name__ == "__main__":
     parser = PdfParser(pdf_filename="odpis_aktualny_5.pdf")
-    datafields = parser.load_pdf(debug=True, debug_range=(200, 365))
+    parser.load_pdf(debug=True, debug_range=(200, 365))
+    datafields = parser.parse_paragraphs()
     for key in datafields:
         print(f"{key} : {datafields[key]}")
 
