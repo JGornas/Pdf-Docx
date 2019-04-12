@@ -15,12 +15,35 @@ class PdfParser:
                              }
         self.active = 0
         self.unicode = "\u00D3\u0104\u0106\u0141\u0143\u015A\u0179\u017B"
+        self.paragraphs = []
 
-    def search_byindex(self, index, paragraph, paragraphs, cell_name):
-        index = paragraphs.index(paragraph) + index
-        if paragraphs[index + 1] is not "":  # for multiline text cells
-            paragraphs[index] += f" {paragraphs[index + 1]}"
-        self.datafields[cell_name] = paragraphs[index]
+    def search_byindex(self, index, cell_name, paragraph):
+        index = self.paragraphs.index(paragraph) + index
+        if paragraph.startswith("1.Siedziba"):
+            kraj, wojewodztwo, powiat, gmina, miejscowosc = self.paragraphs[index].split(",")
+            miejscowosc = miejscowosc.strip("  miejsc.")
+            self.datafields["Siedziba_Kraj"] = kraj.strip("kraj ")
+            self.datafields["Siedziba_Wojewodztwo"] = wojewodztwo.strip("woj. ")
+            self.datafields["Siedziba_Powiat"] = powiat.strip("  powiat ")
+            self.datafields["Siedziba_Gmina"] = gmina.strip("  gmina ")
+            self.datafields["Siedziba_Miejscowosc"] = miejscowosc
+        if paragraph.startswith("2.Adres"):
+            ulica, numer, lokal, miejscowosc, kod, poczta, kraj = self.paragraphs[index].split(",")
+            self.datafields["Adres_Ulica"] = ulica.strip("ul.  ")
+            self.datafields["Adres_Numer"] = numer.strip(" nr ")
+            self.datafields["Adres_Lokal"] = lokal.strip("lok. ")
+            self.datafields["Adres_Miejscowosc"] = miejscowosc.strip("  miejsc.")
+            self.datafields["Adres_Kod"] = kod.strip(" kod ")
+            self.datafields["Adres_Poczta"] = poczta.strip(" poczta ")
+            self.datafields["Adres_Kraj"] = kraj.strip("kraj ")
+        if paragraph.startswith("2.Numer REGON/NIP"):
+            regon, nip = self.paragraphs[index].split(",")
+            self.datafields["NIP"] = nip.strip("  NIP: ").split()[0].strip("---")
+            self.datafields["REGON"] = regon.strip("REGON: ").split()[0]
+        else:
+            if self.paragraphs[index + 1] is not "":  # for multiline text cells
+                self.paragraphs[index] += f" {self.paragraphs[index + 1]}"
+            self.datafields[cell_name] = self.paragraphs[index]
         self.parsed_state[cell_name] = True
 
     def search_byloop(self):
@@ -39,67 +62,32 @@ class PdfParser:
             for counter, paragraph in enumerate(paragraphs):
                 if debug_range[0] < counter < debug_range[1]:
                     print(counter, paragraph)
-
+        self.paragraphs = paragraphs
         for paragraph in paragraphs:
             if paragraph == "Oznaczenie sądu" and self.parsed_state["Oznaczenie sądu"] is False:
-                #index = paragraphs.index(paragraph) + 4
-                #if paragraphs[index + 1] is not "":  # for multiline text cells
-                #    paragraphs[index] += f" {paragraphs[index + 1]}"
-                #self.datafields["Oznaczenie sądu"] = paragraphs[index]
-                self.search_byindex(4, paragraph, paragraphs, "Oznaczenie sądu")
+                self.search_byindex(4, "Oznaczenie sądu", paragraph)
 
             if paragraph.startswith("3.Firma,") and self.parsed_state["Firma, pod którą spółka działa"] is False:
-                index = paragraphs.index(paragraph) + 2
-                self.datafields["Firma, pod którą spółka działa"] = paragraphs[index]
-                self.parsed_state["Firma, pod którą spółka działa"] = True
+                self.search_byindex(2, "Firma, pod którą spółka działa", paragraph)
 
             if paragraph.startswith("1.Siedziba") and self.parsed_state["Siedziba"] is False:
-                index = paragraphs.index(paragraph) + 4
-                kraj, wojewodztwo, powiat, gmina, miejscowosc = paragraphs[index].split(",")
-                miejscowosc = miejscowosc.strip("  miejsc.")
-                self.datafields["Siedziba_Kraj"] = kraj.strip("kraj ")
-                self.datafields["Siedziba_Wojewodztwo"] = wojewodztwo.strip("woj. ")
-                self.datafields["Siedziba_Powiat"] = powiat.strip("  powiat ")
-                self.datafields["Siedziba_Gmina"] = gmina.strip("  gmina ")
-                self.datafields["Siedziba_Miejscowosc"] = miejscowosc
-                self.parsed_state["Siedziba"] = True
+                self.search_byindex(4, "Siedziba", paragraph)
 
             if paragraph.startswith("2.Adres") and self.parsed_state["Adres"] is False:
-                index = paragraphs.index(paragraph) + 4
-                ulica, numer, lokal, miejscowosc, kod, poczta, kraj = paragraphs[index].split(",")
-                miejscowosc = miejscowosc.strip("  miejsc.")
-                if miejscowosc == "":  # checks for a newline
-                    index = index + 1
-                    miejscowosc = paragraphs[index]
-                self.datafields["Adres_Ulica"] = ulica.strip("ul.  ")
-                self.datafields["Adres_Numer"] = numer.strip(" nr ")
-                self.datafields["Adres_Lokal"] = lokal.strip("lok. ")
-                self.datafields["Adres_Miejscowosc"] = miejscowosc
-                self.datafields["Adres_Kod"] = kod.strip(" kod ")
-                self.datafields["Adres_Poczta"] = poczta.strip(" poczta ")
-                self.datafields["Adres_Kraj"] = kraj.strip("kraj ")
-                self.parsed_state["Adres"] = True
+                self.search_byindex(4, "Adres", paragraph)
 
             if paragraph.startswith("Numer KRS") and self.parsed_state["KRS"] is False:
                 self.datafields["KRS"] = paragraph.split()[-1]
                 self.parsed_state["KRS"] = True
 
             if paragraph.startswith("2.Numer REGON/NIP") and self.parsed_state["REGON/NIP"] is False:
-                index = paragraphs.index(paragraph) + 2
-                regon, nip = paragraphs[index].split(",")
-                self.datafields["NIP"] = nip.strip("  NIP: ").split()[0].strip("---")
-                self.datafields["REGON"] = regon.strip("REGON: ").split()[0]
-                self.parsed_state["KRS"] = True
+                self.search_byindex(2, "REGON/NIP", paragraph)
 
             if paragraph.startswith("1.Oznaczenie formy prawnej") and self.parsed_state["Forma Prawna"] is False:
-                index = paragraphs.index(paragraph) + 2
-                self.datafields["Forma Prawna"] = paragraphs[index]
-                self.parsed_state["Forma Prawna"] = True
+                self.search_byindex(2, "Forma Prawna", paragraph)
 
             if paragraph.startswith("1.Wysokość kapitału zakładowego"):
-                index = paragraphs.index(paragraph) + 2
-                self.datafields["Kapitał Zakładowy"] = paragraphs[index]
-                self.parsed_state["Kapitał Zakładowy"] = True
+                self.search_byindex(2, "Kapitał Zakładowy", paragraph)
 
             if paragraph.startswith("1.Nazwisko / Nazwa lub firma"):
                 self.parsed_state["Wspólnicy"] = True
