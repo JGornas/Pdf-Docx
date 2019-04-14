@@ -3,7 +3,7 @@ from datetime import datetime
 import docx
 from docx.shared import Pt
 from subprocess import call
-from sys import exec_prefix
+from sys import exec_prefix, executable
 
 
 class DocParser:
@@ -40,20 +40,20 @@ class DocParser:
         self.regon_full = self.nip_full = ""  # bugfix
 
     # VIRTUAL ENVIREMENT DEPENANT:
+    # def extract_pdf(self):
+    #    call([os.path.join("venv", "Scripts", "python.exe"),
+    #          os.path.join("venv", "Scripts", "pdf2txt.py"),
+    #          os.path.join("pdf", f"{self.pdf_filename}"),
+    #          os.path.join(f"-otxt", f"{self.txt_filename}")])
+    #    print(f"\n>>> Extracting text from '{self.pdf_filename}'")
+
+    # ENVIREMENT INDEPENTENT:
     def extract_pdf(self):
-        call([os.path.join("venv", "Scripts", "python.exe"),
-              os.path.join("venv", "Scripts", "pdf2txt.py"),
+        call([executable,
+              os.path.join(f"{exec_prefix}", "Scripts", "pdf2txt.py"),
               os.path.join("pdf", f"{self.pdf_filename}"),
               os.path.join(f"-otxt", f"{self.txt_filename}")])
         print(f"\n>>> Extracting text from '{self.pdf_filename}'")
-
-    # ENVIREMENT INDEPENTENT:
-    # def extract_pdf(self):
-    #     call([os.path.join("python.exe"),
-    #           os.path.join(f"{exec_prefix}", "Scripts", "pdf2txt.py"),
-    #           os.path.join("pdf", f"{self.pdf_filename}"),
-    #           os.path.join(f"-otxt", f"{self.txt_filename}")])
-    #     print(f"\n>>> Extracting text from '{self.pdf_filename}'")
 
     def open_txt(self):  # Initiates the string object from the txt file.
         with open(os.path.join("txt", f"{self.txt_filename}"), "r", encoding="utf-8") as file:
