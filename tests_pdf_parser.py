@@ -1,5 +1,5 @@
 import unittest
-from new_parser import PdfParser
+from pdf_parser import PdfParser
 
 
 class TestPdfParser(unittest.TestCase):
@@ -64,11 +64,11 @@ class TestPdfParser(unittest.TestCase):
         self.assertEqual(datafields["Zarząd 3"]["Imiona"], "KORNEL FILIP")
         self.assertEqual(datafields["Zarząd 3"]["Funkcja"], "CZŁONEK ZARZĄDU")
 
-
     def test_pdf_3(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_3.pdf"
-        datafields = parser.load_pdf(remove_txt=False, debug=False)
+        parser.load_pdf(remove_txt=False, debug=False)
+        datafields = parser.parse_paragraphs()
         self.assertEqual(datafields["Firma, pod którą spółka działa"],
                          "SECO/WARWICK SERVICES SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ")
         self.assertEqual(datafields["Oznaczenie sądu"],
@@ -110,7 +110,8 @@ class TestPdfParser(unittest.TestCase):
     def test_pdf_mouser(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_Mouser.pdf"
-        datafields = parser.load_pdf(remove_txt=False, debug=False)
+        parser.load_pdf(remove_txt=False, debug=False)
+        datafields = parser.parse_paragraphs()
         self.assertEqual(datafields["Firma, pod którą spółka działa"],
                          "MOUSER POLAND SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ")
         self.assertEqual(datafields["Oznaczenie sądu"],
@@ -147,7 +148,48 @@ class TestPdfParser(unittest.TestCase):
         self.assertEqual(datafields["Zarząd 1"]["Imiona"], "SCOTT LESLIE")
         self.assertEqual(datafields["Zarząd 1"]["Funkcja"], "PREZES ZARZĄDU")
 
+    def test_pdf_Seco(self):
+        parser = PdfParser()
+        parser.pdf_filename = "odpis_aktualny_Seco.pdf"
+        parser.load_pdf(remove_txt=False, debug=False)
+        datafields = parser.parse_paragraphs()
+        self.assertEqual(datafields["Firma, pod którą spółka działa"],
+                         "SECO/WARWICK SPÓŁKA AKCYJNA")
+        self.assertEqual(datafields["Oznaczenie sądu"],
+                         "SĄD REJONOWY  W ZIELONEJ GÓRZE,"
+                         " VIII WYDZIAŁ GOSPODARCZY KRAJOWEGO REJESTRU SĄDOWEGO")
+        self.assertEqual(datafields["Forma Prawna"], "SPÓŁKA AKCYJNA")
+        self.assertEqual(datafields["KRS"], "0000271014")
+        self.assertEqual(datafields["NIP"], "9270100756")
+        self.assertEqual(datafields["REGON"], "970011679")
 
+        self.assertEqual(datafields["Siedziba_Kraj"], "POLSKA")
+        self.assertEqual(datafields["Siedziba_Wojewodztwo"], "LUBUSKIE")
+        self.assertEqual(datafields["Siedziba_Powiat"], "ŚWIEBODZIŃSKI")
+        self.assertEqual(datafields["Siedziba_Gmina"], "ŚWIEBODZIN")
+        self.assertEqual(datafields["Siedziba_Miejscowosc"], "ŚWIEBODZIN")
+
+        self.assertEqual(datafields["Adres_Ulica"], "SOBIESKIEGO")
+        self.assertEqual(datafields["Adres_Numer"], "8")
+        self.assertEqual(datafields["Adres_Lokal"], "---")
+        self.assertEqual(datafields["Adres_Miejscowosc"], "ŚWIEBODZIN")
+        self.assertEqual(datafields["Adres_Kod"], "66-200")
+        self.assertEqual(datafields["Adres_Poczta"], "ŚWIEBODZIN")
+        self.assertEqual(datafields["Adres_Kraj"], "POLSKA")
+
+        self.assertEqual(datafields["Kapitał Zakładowy"], "2 059 710,80 ZŁ")
+
+        self.assertEqual(datafields["Zarząd 1"]["Nazwisko/Nazwa"], "WYRZYKOWSKI")
+        self.assertEqual(datafields["Zarząd 1"]["Imiona"], "PAWEŁ")
+        self.assertEqual(datafields["Zarząd 1"]["Funkcja"], "PREZES ZARZĄDU")
+
+        self.assertEqual(datafields["Zarząd 2"]["Nazwisko/Nazwa"], "KLINOWSKI")
+        self.assertEqual(datafields["Zarząd 2"]["Imiona"], "BARTOSZ MAREK")
+        self.assertEqual(datafields["Zarząd 2"]["Funkcja"], "CZŁONEK ZARZĄDU")
+
+        self.assertEqual(datafields["Zarząd 3"]["Nazwisko/Nazwa"], "WOŹNIAK")
+        self.assertEqual(datafields["Zarząd 3"]["Imiona"], "SŁAWOMIR STANISŁAW")
+        self.assertEqual(datafields["Zarząd 3"]["Funkcja"], "WICEPREZES ZARZĄDU")
 
 
 

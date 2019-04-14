@@ -3,6 +3,7 @@ from datetime import datetime
 import docx
 from docx.shared import Pt
 from subprocess import call
+from sys import exec_prefix
 
 
 class DocParser:
@@ -11,12 +12,14 @@ class DocParser:
         self.date = f"{self.data.day}.{self.data.month}.{self.data.year}"
         self.time = f"{self.data.hour}:{self.data.minute}:{self.data.second}"
 
+        [os.makedirs(folder, exist_ok=True) for folder in ["docx", "logs", "txt"]]
+
         self.filename = pdf_file.strip(".pdf")
         self.pdf_filename = pdf_file
         self.txt_filename = f"{self.filename}.txt"
         self.docx_filename = f"{self.filename}.docx"
 
-        """Variables for pdf parsing. Names are after searched fields in the file."""  # init as a dictionary mabye?
+        """Variables for pdf parsing. Names are after searched fields in the file."""
         self.txt_string = self.oznaczenie = self.krs = ""
         self.woj = self.powiat = self.gmina = self.miejsc = ""
         self.nazwa = self.regon = self.nip = ""
@@ -30,18 +33,27 @@ class DocParser:
         self.font = self.document.styles['Normal'].font
         self.font.name = 'Arial'
 
-        """Locks the cell in the document after parsing."""  # dict?
+        """Locks the cell in the document after parsing."""
         self.oznaczenie_done = self.woj_done = self.powiat_done = self.gmina_done = self.miejsc_done = False
         self.krs_done = self.nazwa_done = self.regon_done = self.nip_done = self.data_done = False
 
         self.regon_full = self.nip_full = ""  # bugfix
 
+    # VIRTUAL ENVIREMENT DEPENANT:
     def extract_pdf(self):
         call([os.path.join("venv", "Scripts", "python.exe"),
               os.path.join("venv", "Scripts", "pdf2txt.py"),
               os.path.join("pdf", f"{self.pdf_filename}"),
               os.path.join(f"-otxt", f"{self.txt_filename}")])
         print(f"\n>>> Extracting text from '{self.pdf_filename}'")
+
+    # ENVIREMENT INDEPENTENT:
+    # def extract_pdf(self):
+    #     call([os.path.join("python.exe"),
+    #           os.path.join(f"{exec_prefix}", "Scripts", "pdf2txt.py"),
+    #           os.path.join("pdf", f"{self.pdf_filename}"),
+    #           os.path.join(f"-otxt", f"{self.txt_filename}")])
+    #     print(f"\n>>> Extracting text from '{self.pdf_filename}'")
 
     def open_txt(self):  # Initiates the string object from the txt file.
         with open(os.path.join("txt", f"{self.txt_filename}"), "r", encoding="utf-8") as file:
@@ -237,11 +249,10 @@ if __name__ == "__main__":  # debug
     parser = DocParser("odpis_aktualny_1.pdf")
     parser.extract_pdf()
     parser.open_txt()
-    # parser.clear_temp()
+    parser.clear_temp()
     parser.parse_txt()
     parser.print_formatted_data()
     parser.parse_docx()
     parser.save_docx()
     parser.create_logfile()
     parser.save_logfile()
-
