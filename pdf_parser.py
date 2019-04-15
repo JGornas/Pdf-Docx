@@ -1,7 +1,7 @@
 from subprocess import call
 import os
 import re
-
+from sys import executable, exec_prefix
 
 class PdfParser:
     def __init__(self, pdf_filename="odpis_aktualny_1.pdf"):
@@ -19,12 +19,18 @@ class PdfParser:
         self.unicode = "\u00D3\u0104\u0106\u0141\u0143\u015A\u0179\u017B"  # Uppercode for regex patterns.
         self.paragraphs = []  # list of all paragraphs, made from txt file.
 
-    def load_pdf(self, remove_txt=True, debug=()):
+    def load_pdf(self, env="default", remove_txt=True, debug=()):
         """Extracts text from pdf. Debug takes a tuple (index, index2), empty tuple to skip."""
-        call([os.path.join("venv", "Scripts", "python.exe"),
-              os.path.join("venv", "Scripts", "pdf2txt.py"),
-              os.path.join("pdf", f"{self.pdf_filename}"),
-              os.path.join(f"-otxt", f"{self.txt_filename}")])
+        if env is "default":  # default python path
+            call([executable,
+                  os.path.join(f"{exec_prefix}", "Scripts", "pdf2txt.py"),
+                  os.path.join("pdf", f"{self.pdf_filename}"),
+                  os.path.join(f"-otxt", f"{self.txt_filename}")])
+        if env is "venv":  # virtual environment
+            call([os.path.join("venv", "Scripts", "python.exe"),
+                  os.path.join("venv", "Scripts", "pdf2txt.py"),
+                  os.path.join("pdf", f"{self.pdf_filename}"),
+                  os.path.join(f"-otxt", f"{self.txt_filename}")])
         with open(os.path.join("txt", f"{self.txt_filename}"), "r", encoding="utf-8") as file:
             self.paragraphs = [paragraph.rstrip('\n') for paragraph in file]
         if remove_txt:
@@ -170,7 +176,7 @@ class PdfParser:
 
 if __name__ == "__main__":  # DEBUG
     parser = PdfParser(pdf_filename="odpis_aktualny_1.pdf")
-    parser.load_pdf(debug=(0, 500))
+    parser.load_pdf(env="venv", debug=(0, 500))
     datafields = parser.parse_paragraphs()
     for key in datafields:
         print(f"{key} : {datafields[key]}")
