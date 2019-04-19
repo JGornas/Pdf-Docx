@@ -175,7 +175,7 @@ class PdfParser:
 
 
 if __name__ == "__main__":  # DEBUG
-    parser = PdfParser(pdf_filename="odpis_aktualny_1.pdf")
+    parser = PdfParser(pdf_filename="odpis_aktualny_H&D.pdf")
     parser.load_pdf(env="venv", debug=(0, 500))
     datafields = parser.parse_paragraphs()
     for key in datafields:

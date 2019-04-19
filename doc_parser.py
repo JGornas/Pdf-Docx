@@ -8,9 +8,9 @@ from sys import exec_prefix, executable
 
 class DocParser:
     def __init__(self, pdf_file=""):
-        self.data = datetime.now()  # date object
-        self.date = f"{self.data.day}.{self.data.month}.{self.data.year}"
-        self.time = f"{self.data.hour}:{self.data.minute}:{self.data.second}"
+        self.datetime = datetime.now()
+        self.date = f"{self.datetime.day}.{self.datetime.month}.{self.datetime.year}"
+        self.time = f"{self.datetime.hour}:{self.datetime.minute}:{self.datetime.second}"
 
         [os.makedirs(folder, exist_ok=True) for folder in ["docx", "logs", "txt"]]
 
@@ -19,12 +19,13 @@ class DocParser:
         self.txt_filename = f"{self.filename}.txt"
         self.docx_filename = f"{self.filename}.docx"
 
-        """Variables for pdf parsing. Names are after searched fields in the file."""
+        """Store data from pdf file."""
         self.txt_string = self.oznaczenie = self.krs = ""
         self.woj = self.powiat = self.gmina = self.miejsc = ""
         self.nazwa = self.regon = self.nip = ""
         self.nazwa_parsed = self.reg_nip_parsed = False
 
+        """Use 'self.logfile.add_paragraph' method to add to a logfile."""
         self.logfile = docx.Document()
 
         """All variables will be parsed through the template document."""
@@ -39,30 +40,27 @@ class DocParser:
 
         self.regon_full = self.nip_full = ""  # bugfix
 
-    # VIRTUAL ENVIREMENT DEPENANT:
-    # def extract_pdf(self):
-    #    call([os.path.join("venv", "Scripts", "python.exe"),
-    #          os.path.join("venv", "Scripts", "pdf2txt.py"),
-    #          os.path.join("pdf", f"{self.pdf_filename}"),
-    #          os.path.join(f"-otxt", f"{self.txt_filename}")])
-    #    print(f"\n>>> Extracting text from '{self.pdf_filename}'")
-
-    # ENVIREMENT INDEPENTENT:
-    def extract_pdf(self):
-        call([executable,
-              os.path.join(f"{exec_prefix}", "Scripts", "pdf2txt.py"),
-              os.path.join("pdf", f"{self.pdf_filename}"),
-              os.path.join(f"-otxt", f"{self.txt_filename}")])
+    def extract_pdf(self, env="default"):
+        if env is "default":
+            call([executable,
+                  os.path.join(f"{exec_prefix}", "Scripts", "pdf2txt.py"),
+                  os.path.join("pdf", f"{self.pdf_filename}"),
+                  os.path.join(f"-otxt", f"{self.txt_filename}")])
+        if env is "venv":
+            call([os.path.join("venv", "Scripts", "python.exe"),
+                  os.path.join("venv", "Scripts", "pdf2txt.py"),
+                  os.path.join("pdf", f"{self.pdf_filename}"),
+                  os.path.join(f"-otxt", f"{self.txt_filename}")])
         print(f"\n>>> Extracting text from '{self.pdf_filename}'")
 
     def open_txt(self):  # Initiates the string object from the txt file.
         with open(os.path.join("txt", f"{self.txt_filename}"), "r", encoding="utf-8") as file:
             self.txt_string = [line.rstrip('\n') for line in file]
 
-    def get_txt_string(self):  # Debug only; for connecting correct paragraphs from the txt object.
-        for counter, line in enumerate(self.txt_string):
-            print(counter, line)
-        return self.txt_string
+    def debug(self, range=()):  # Prints a line with index tag, from index [0] to [1].
+        for index, line in enumerate(self.txt_string):
+            if range[0] < index < range[1]:
+                print(index, line)
 
     def parse_txt(self):
         """Loops through the txt file and maps distinct values to the class variables"""
@@ -129,8 +127,8 @@ class DocParser:
         )
 
     def save_logfile(self):
-        self.logfile.save(os.path.join("logs", f"({self.data.day}-{self.data.month}-{self.data.year})"
-                          f"-({self.data.hour}-{self.data.minute}-{self.data.second})-{self.docx_filename}"))
+        self.logfile.save(os.path.join("logs", f"({self.datetime.day}-{self.datetime.month}-{self.datetime.year})"
+                          f"-({self.datetime.hour}-{self.datetime.minute}-{self.datetime.second})-{self.docx_filename}"))
         print(">>> Logfile created!")
 
     def parse_docx(self):
