@@ -57,10 +57,13 @@ class DocParser:
         with open(os.path.join("txt", f"{self.txt_filename}"), "r", encoding="utf-8") as file:
             self.txt_string = [line.rstrip('\n') for line in file]
 
-    def debug(self, range=()):  # Prints a line with index tag, from index [0] to [1].
+    def debug(self, span=(0, 0)):  # Prints a line with index tag, spanning from [0] to [1].
         for index, line in enumerate(self.txt_string):
-            if range[0] < index < range[1]:
-                print(index, line)
+            try:
+                if span[0] < index < span[1]:
+                    print(index, line)
+            except TypeError:
+                print("Span must be a (x,y) touple.")
 
     def parse_txt(self):
         """Loops through the txt file and maps distinct values to the class variables"""

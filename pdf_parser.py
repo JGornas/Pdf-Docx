@@ -3,6 +3,7 @@ import os
 import re
 from sys import executable, exec_prefix
 
+
 class PdfParser:
     def __init__(self, pdf_filename="odpis_aktualny_1.pdf"):
         self.pdf_filename = pdf_filename
@@ -37,8 +38,11 @@ class PdfParser:
             os.remove(os.path.join("txt", f"{self.txt_filename}"))
         if debug:
             for counter, paragraph in enumerate(self.paragraphs):
-                if int(debug[0]) < counter < int(debug[1]):
-                    print(counter, paragraph)
+                try:
+                    if int(debug[0]) < counter < int(debug[1]):
+                        print(counter, paragraph)
+                except TypeError:
+                    print("Debug must be a (x,y) touple.")
 
     def search_index(self, index, cell_name, paragraph):
         """Jumps a fixed number of indexes down the list and creates key: value pair. Next step parsing here.."""
