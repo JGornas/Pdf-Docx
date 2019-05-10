@@ -7,7 +7,7 @@ class TestPdfParser(unittest.TestCase):
     def test_pdf_1(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_1.pdf"
-        parser.load_pdf(remove_txt=False, debug=False)
+        parser.load_pdf()
         datafields = parser.parse_paragraphs()
         self.assertEqual(datafields["Firma, pod którą spółka działa"],
                          "MODELARNIA SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ")
@@ -67,7 +67,7 @@ class TestPdfParser(unittest.TestCase):
     def test_pdf_3(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_3.pdf"
-        parser.load_pdf(remove_txt=False, debug=False)
+        parser.load_pdf()
         datafields = parser.parse_paragraphs()
         self.assertEqual(datafields["Firma, pod którą spółka działa"],
                          "SECO/WARWICK SERVICES SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ")
@@ -110,7 +110,7 @@ class TestPdfParser(unittest.TestCase):
     def test_pdf_mouser(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_Mouser.pdf"
-        parser.load_pdf(remove_txt=False, debug=False)
+        parser.load_pdf()
         datafields = parser.parse_paragraphs()
         self.assertEqual(datafields["Firma, pod którą spółka działa"],
                          "MOUSER POLAND SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ")
@@ -151,7 +151,7 @@ class TestPdfParser(unittest.TestCase):
     def test_pdf_Seco(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_Seco.pdf"
-        parser.load_pdf(remove_txt=False, debug=False)
+        parser.load_pdf()
         datafields = parser.parse_paragraphs()
         self.assertEqual(datafields["Firma, pod którą spółka działa"],
                          "SECO/WARWICK SPÓŁKA AKCYJNA")

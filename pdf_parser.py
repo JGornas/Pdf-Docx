@@ -10,16 +10,15 @@ class PdfParser:
         self.txt_filename = f"{pdf_filename.strip('.pdf')}.txt"
 
         self.datafields = {}  # Holds all parsed data.
-        self.cell_name = ["Firma, pod którą spółka działa", "Oznaczenie sądu", "Siedziba", "Adres",
-                          "KRS", "REGON/NIP", "Forma Prawna", "Kapitał Zakładowy", "Wspólnicy", "Zarząd"]
-
-        self.parsed_state = {locked: False for locked in self.cell_name}  # All fields start as not parsed.
+        self.cells = ["Firma, pod którą spółka działa", "Oznaczenie sądu", "Siedziba", "Adres",
+                      "KRS", "REGON/NIP", "Forma Prawna", "Kapitał Zakładowy", "Wspólnicy", "Zarząd"]
+        self.locked_cells = {locked: False for locked in self.cells}  # Locks dictionary key after parsing data.
 
         self.active = 0  # "Wspólnik: int" or "Zarząd: int" currently worked on.
         self.unicode = "\u00D3\u0104\u0106\u0141\u0143\u015A\u0179\u017B"  # Uppercode for regex patterns.
         self.paragraphs = []  # list of all paragraphs, made from txt file.
 
-    def load_pdf(self, env="default", remove_txt=True, debug=()):
+    def load_pdf(self, env="default", debug=()):
         """Extracts text from pdf. Debug takes a tuple (from index to index2), empty tuple to skip."""
         os.makedirs("txt", exist_ok=True)
         if env is "default":  # default python path
@@ -34,8 +33,7 @@ class PdfParser:
                   os.path.join(f"-otxt", f"{self.txt_filename}")])
         with open(os.path.join("txt", f"{self.txt_filename}"), "r", encoding="utf-8") as file:
             self.paragraphs = [paragraph.rstrip('\n') for paragraph in file]
-        if remove_txt:
-            os.remove(os.path.join("txt", f"{self.txt_filename}"))
+        os.remove(os.path.join("txt", f"{self.txt_filename}"))
         if debug:
             for counter, paragraph in enumerate(self.paragraphs):
                 try:
@@ -72,7 +70,7 @@ class PdfParser:
             if self.paragraphs[index + 1] is not "":  # for multiline text cells
                 self.paragraphs[index] += f" {self.paragraphs[index + 1]}"
             self.datafields[cell_name] = self.paragraphs[index]
-        self.parsed_state[cell_name] = True
+        self.locked_cells[cell_name] = True
 
     def search_loop(self, pattern, parent, cell_name, paragraph):
         """Takes pattern for regex search and returns the outcome out of the loop."""
@@ -99,29 +97,29 @@ class PdfParser:
         paragraphs = self.paragraphs
         for paragraph in paragraphs:
             try:
-                if paragraph == "Oznaczenie sądu" and not self.parsed_state["Oznaczenie sądu"]:
+                if paragraph == "Oznaczenie sądu" and not self.locked_cells["Oznaczenie sądu"]:
                     self.search_index(4, "Oznaczenie sądu", paragraph)
 
-                if paragraph.startswith("3.Firma,") and not self.parsed_state["Firma, pod którą spółka działa"]:
+                if paragraph.startswith("3.Firma,") and not self.locked_cells["Firma, pod którą spółka działa"]:
                     self.search_index(2, "Firma, pod którą spółka działa", paragraph)
 
-                if paragraph.startswith("3.Nazwa") and not self.parsed_state["Firma, pod którą spółka działa"]:
+                if paragraph.startswith("3.Nazwa") and not self.locked_cells["Firma, pod którą spółka działa"]:
                     self.search_index(2, "Firma, pod którą spółka działa", paragraph)
 
-                if paragraph.startswith("1.Siedziba") and not self.parsed_state["Siedziba"]:
+                if paragraph.startswith("1.Siedziba") and not self.locked_cells["Siedziba"]:
                     self.search_index(4, "Siedziba", paragraph)
 
-                if paragraph.startswith("2.Adres") and not self.parsed_state["Adres"]:
+                if paragraph.startswith("2.Adres") and not self.locked_cells["Adres"]:
                     self.search_index(4, "Adres", paragraph)
 
-                if paragraph.startswith("Numer KRS") and not self.parsed_state["KRS"]:
+                if paragraph.startswith("Numer KRS") and not self.locked_cells["KRS"]:
                     self.datafields["KRS"] = paragraph.split()[-1]
-                    self.parsed_state["KRS"] = True
+                    self.locked_cells["KRS"] = True
 
-                if paragraph.startswith("2.Numer REGON/NIP") and not self.parsed_state["REGON/NIP"]:
+                if paragraph.startswith("2.Numer REGON/NIP") and not self.locked_cells["REGON/NIP"]:
                     self.search_index(2, "REGON/NIP", paragraph)
 
-                if paragraph.startswith("1.Oznaczenie formy prawnej") and not self.parsed_state["Forma Prawna"]:
+                if paragraph.startswith("1.Oznaczenie formy prawnej") and not self.locked_cells["Forma Prawna"]:
                     self.search_index(2, "Forma Prawna", paragraph)
 
                 if paragraph.startswith("1.Wysokość kapitału zakładowego"):
@@ -131,27 +129,27 @@ class PdfParser:
                     self.search_index(2, "Kapitał Wpłacony", paragraph)
 
                 if paragraph.startswith("Rubryka 7 - Dane wspólników"):  # Open "Wspólnicy" parsing block.
-                    self.parsed_state["Wspólnicy"] = True
+                    self.locked_cells["Wspólnicy"] = True
 
                 if paragraph.startswith("Rubryka 7 - Komitet założycielski"):  # STOWARZYSZENIE
                     break
 
-                if paragraph.startswith("1.Nazwisko / Nazwa lub firma") and self.parsed_state["Wspólnicy"]:
+                if paragraph.startswith("1.Nazwisko / Nazwa lub firma") and self.locked_cells["Wspólnicy"]:
                     self.active += 1
                     self.datafields[f"Wspólnik {self.active}"] = {}
 
                     pattern = rf"^[A-Z{self.unicode}]+"
                     self.search_loop(pattern, "Wspólnik", "Nazwisko/Nazwa", paragraph)
 
-                if paragraph.startswith("2.Imiona") and self.parsed_state["Wspólnicy"]:
+                if paragraph.startswith("2.Imiona") and self.locked_cells["Wspólnicy"]:
                     pattern = rf"[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
                     self.search_loop(pattern, "Wspólnik", "Imiona", paragraph)
 
-                if paragraph.startswith("3.Numer PESEL/REGON") and self.parsed_state["Wspólnicy"]:
+                if paragraph.startswith("3.Numer PESEL/REGON") and self.locked_cells["Wspólnicy"]:
                     pattern = r"[-]+|[0-9]{9,11}"
                     self.search_loop(pattern, "Wspólnik", "PESEL/REGON", paragraph)
 
-                if paragraph.startswith("4.Numer KRS") and self.parsed_state["Wspólnicy"]:
+                if paragraph.startswith("4.Numer KRS") and self.locked_cells["Wspólnicy"]:
                     pattern = r"[-]+|[*]+|[0-9]{10}$"
                     self.search_loop(pattern, "Wspólnik", "KRS", paragraph)
 
@@ -165,26 +163,26 @@ class PdfParser:
                         self.datafields[f"Wspólnik {self.active}"]["Udziały"] = f"{line_1}"
 
                 if paragraph == "ZARZĄD":
-                    self.parsed_state["Wspólnicy"] = False  # Close "Wspólnicy" parsing block.
-                    self.parsed_state["Zarząd"] = True  # Open "Zarząd" parsing block.
+                    self.locked_cells["Wspólnicy"] = False  # Close "Wspólnicy" parsing block.
+                    self.locked_cells["Zarząd"] = True  # Open "Zarząd" parsing block.
                     self.active = 0
 
-                if paragraph.startswith("1.Nazwisko") and self.parsed_state["Zarząd"]:
+                if paragraph.startswith("1.Nazwisko") and self.locked_cells["Zarząd"]:
                     self.active += 1
                     self.datafields[f"Zarząd {self.active}"] = {}
                     pattern = rf"^[A-Z{self.unicode}]+"
                     self.search_loop(pattern, "Zarząd", "Nazwisko/Nazwa", paragraph)
 
-                if paragraph.startswith("2.Imiona") and self.parsed_state["Zarząd"]:
+                if paragraph.startswith("2.Imiona") and self.locked_cells["Zarząd"]:
                     pattern = rf"^[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
                     self.search_loop(pattern, "Zarząd", "Imiona", paragraph)
 
-                if paragraph.startswith("5.Funkcja w organie ") and self.parsed_state["Zarząd"]:
+                if paragraph.startswith("5.Funkcja w organie ") and self.locked_cells["Zarząd"]:
                     paragraph = paragraph.strip("5.Funkcja w organie reprezentującym ")
                     self.datafields[f"Zarząd {self.active}"]["Funkcja"] = paragraph
 
                 if paragraph.startswith("Rubryka 2 - Organ nadzoru"):
-                    self.parsed_state["Zarząd"] = False  # Close "Zarząd" parsing block.
+                    self.locked_cells["Zarząd"] = False  # Close "Zarząd" parsing block.
             except KeyError:
                 pass
         return self.datafields
