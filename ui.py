@@ -42,7 +42,6 @@ class UserInterface:
                 parser.parse_pdf(pdf_file)  # initiate parser object with pdf file
                 parser.print_datafields()
                 parser.parse_docx()
-        input(f">  Finished!\n>  Press Enter to exit")
 
     @staticmethod
     def parse_file(pdf_file):
@@ -54,13 +53,20 @@ class UserInterface:
     @staticmethod
     def files():
         files = os.listdir(os.path.join("pdf", ""))
-        [print(file) for file in files]
+        [print(f"- {file}") for file in files]
+
+    @staticmethod
+    def help():
+        print("> List of commands:\n"
+              "- all - Parses all files in pdf directory.\n"
+              "- file 'filename' - Parses one pdf file. Eg. 'file odpis_aktualny_1.pdf'.\n"
+              "- files - Prints all files in the pdf directory.\n"
+              "- exit - Exits the application.")
 
     def ui_loop(self):
-        commands = {"all": self.parse_dir, "file": self.parse_file, "exit": exit, "files": self.files}
-        print(">>> Now running: Pdf-Docx\n> To parse all files in pdf directory enter 'all',"
-              " to parse individual file in the directory enter 'file odpis_aktualny_1.pdf.\n"
-              "> Enter 'files' for all files in folder and 'exit' to exit.")
+        commands = {"all": self.parse_dir, "file": self.parse_file,
+                    "exit": exit, "files": self.files, "help": self.help}
+        print(">>> Now running: Pdf-Docx\n> Enter 'help' for a list of commands.")
         while True:
             user_input = input("> Enter command:\n> ")
             try:
