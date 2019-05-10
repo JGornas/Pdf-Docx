@@ -22,7 +22,7 @@ Use ui_loop() method of UserInterface class.
 
 ```python
 from ui import UserInterface
-ui = UserInterface("odpis_aktualny.pdf")
+ui = UserInterface()
 ui.ui_loop()
 ```
 
