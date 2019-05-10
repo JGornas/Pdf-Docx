@@ -1,7 +1,7 @@
 from subprocess import call
-import os
-import re
 from sys import executable, exec_prefix
+import re
+import os
 
 
 class PdfParser:
@@ -10,18 +10,18 @@ class PdfParser:
         self.txt_filename = f"{pdf_filename.strip('.pdf')}.txt"
 
         self.datafields = {}  # Holds all parsed data.
-        self.cell_name = [
-                          "Firma, pod którą spółka działa", "Oznaczenie sądu", "Siedziba", "Adres",
-                          "KRS", "REGON/NIP", "Forma Prawna", "Kapitał Zakładowy", "Wspólnicy", "Zarząd"
-                          ]
-        self.parsed_state = {key: False for key in self.cell_name}  # All fields start as not parsed.
+        self.cell_name = ["Firma, pod którą spółka działa", "Oznaczenie sądu", "Siedziba", "Adres",
+                          "KRS", "REGON/NIP", "Forma Prawna", "Kapitał Zakładowy", "Wspólnicy", "Zarząd"]
+
+        self.parsed_state = {locked: False for locked in self.cell_name}  # All fields start as not parsed.
 
         self.active = 0  # "Wspólnik: int" or "Zarząd: int" currently worked on.
         self.unicode = "\u00D3\u0104\u0106\u0141\u0143\u015A\u0179\u017B"  # Uppercode for regex patterns.
         self.paragraphs = []  # list of all paragraphs, made from txt file.
 
     def load_pdf(self, env="default", remove_txt=True, debug=()):
-        """Extracts text from pdf. Debug takes a tuple (index, index2), empty tuple to skip."""
+        """Extracts text from pdf. Debug takes a tuple (from index to index2), empty tuple to skip."""
+        os.makedirs("txt", exist_ok=True)
         if env is "default":  # default python path
             call([executable,
                   os.path.join(f"{exec_prefix}", "Scripts", "pdf2txt.py"),
@@ -80,108 +80,119 @@ class PdfParser:
         self.paragraphs[index] = ""
         while True:
             index += 1
-            para = self.paragraphs[index].rstrip()
-            if re.match(pattern, para):
-                self.datafields[f"{parent} {self.active}"][cell_name] = para
-                self.paragraphs[index] = ""
-                break
-            if index is len(self.paragraphs):
+            try:
+                para = self.paragraphs[index].rstrip()
+                try:
+                    if re.match(pattern, para):
+                        self.datafields[f"{parent} {self.active}"][cell_name] = para
+                        self.paragraphs[index] = ""
+                        break
+                    if index is len(self.paragraphs):
+                        break
+                except KeyError:
+                    pass
+            except IndexError:
                 break
 
     def parse_paragraphs(self):
         """Iterates through the string list. On match uses either search_index or search_loop."""
         paragraphs = self.paragraphs
         for paragraph in paragraphs:
-            if paragraph == "Oznaczenie sądu" and not self.parsed_state["Oznaczenie sądu"]:
-                self.search_index(4, "Oznaczenie sądu", paragraph)
+            try:
+                if paragraph == "Oznaczenie sądu" and not self.parsed_state["Oznaczenie sądu"]:
+                    self.search_index(4, "Oznaczenie sądu", paragraph)
 
-            if paragraph.startswith("3.Firma,") and not self.parsed_state["Firma, pod którą spółka działa"]:
-                self.search_index(2, "Firma, pod którą spółka działa", paragraph)
+                if paragraph.startswith("3.Firma,") and not self.parsed_state["Firma, pod którą spółka działa"]:
+                    self.search_index(2, "Firma, pod którą spółka działa", paragraph)
 
-            if paragraph.startswith("1.Siedziba") and not self.parsed_state["Siedziba"]:
-                self.search_index(4, "Siedziba", paragraph)
+                if paragraph.startswith("3.Nazwa") and not self.parsed_state["Firma, pod którą spółka działa"]:
+                    self.search_index(2, "Firma, pod którą spółka działa", paragraph)
 
-            if paragraph.startswith("2.Adres") and not self.parsed_state["Adres"]:
-                self.search_index(4, "Adres", paragraph)
+                if paragraph.startswith("1.Siedziba") and not self.parsed_state["Siedziba"]:
+                    self.search_index(4, "Siedziba", paragraph)
 
-            if paragraph.startswith("Numer KRS") and not self.parsed_state["KRS"]:
-                self.datafields["KRS"] = paragraph.split()[-1]
-                self.parsed_state["KRS"] = True
+                if paragraph.startswith("2.Adres") and not self.parsed_state["Adres"]:
+                    self.search_index(4, "Adres", paragraph)
 
-            if paragraph.startswith("2.Numer REGON/NIP") and not self.parsed_state["REGON/NIP"]:
-                self.search_index(2, "REGON/NIP", paragraph)
+                if paragraph.startswith("Numer KRS") and not self.parsed_state["KRS"]:
+                    self.datafields["KRS"] = paragraph.split()[-1]
+                    self.parsed_state["KRS"] = True
 
-            if paragraph.startswith("1.Oznaczenie formy prawnej") and not self.parsed_state["Forma Prawna"]:
-                self.search_index(2, "Forma Prawna", paragraph)
+                if paragraph.startswith("2.Numer REGON/NIP") and not self.parsed_state["REGON/NIP"]:
+                    self.search_index(2, "REGON/NIP", paragraph)
 
-            if paragraph.startswith("1.Wysokość kapitału zakładowego"):
-                self.search_index(2, "Kapitał Zakładowy", paragraph)
+                if paragraph.startswith("1.Oznaczenie formy prawnej") and not self.parsed_state["Forma Prawna"]:
+                    self.search_index(2, "Forma Prawna", paragraph)
 
-            if paragraph.startswith("5.Kwotowe określenie części kapitału wpłaconego"):
-                self.search_index(2, "Kapitał Wpłacony", paragraph)
+                if paragraph.startswith("1.Wysokość kapitału zakładowego"):
+                    self.search_index(2, "Kapitał Zakładowy", paragraph)
 
-            if paragraph.startswith("Rubryka 7 - Dane wspólników"):  # Open "Wspólnicy" parsing block.
-                self.parsed_state["Wspólnicy"] = True
+                if paragraph.startswith("5.Kwotowe określenie części kapitału wpłaconego"):
+                    self.search_index(2, "Kapitał Wpłacony", paragraph)
 
-            if paragraph.startswith("Rubryka 7 - Komitet założycielski"):  # STOWARZYSZENIE
-                break
+                if paragraph.startswith("Rubryka 7 - Dane wspólników"):  # Open "Wspólnicy" parsing block.
+                    self.parsed_state["Wspólnicy"] = True
 
-            if paragraph.startswith("1.Nazwisko / Nazwa lub firma") and self.parsed_state["Wspólnicy"]:
-                self.active += 1
-                self.datafields[f"Wspólnik {self.active}"] = {}
+                if paragraph.startswith("Rubryka 7 - Komitet założycielski"):  # STOWARZYSZENIE
+                    break
 
-                pattern = rf"^[A-Z{self.unicode}]+"
-                self.search_loop(pattern, "Wspólnik", "Nazwisko/Nazwa", paragraph)
+                if paragraph.startswith("1.Nazwisko / Nazwa lub firma") and self.parsed_state["Wspólnicy"]:
+                    self.active += 1
+                    self.datafields[f"Wspólnik {self.active}"] = {}
 
-            if paragraph.startswith("2.Imiona") and self.parsed_state["Wspólnicy"]:
-                pattern = rf"[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
-                self.search_loop(pattern, "Wspólnik", "Imiona", paragraph)
+                    pattern = rf"^[A-Z{self.unicode}]+"
+                    self.search_loop(pattern, "Wspólnik", "Nazwisko/Nazwa", paragraph)
 
-            if paragraph.startswith("3.Numer PESEL/REGON") and self.parsed_state["Wspólnicy"]:
-                pattern = r"[-]+|[0-9]{9,11}"
-                self.search_loop(pattern, "Wspólnik", "PESEL/REGON", paragraph)
+                if paragraph.startswith("2.Imiona") and self.parsed_state["Wspólnicy"]:
+                    pattern = rf"[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
+                    self.search_loop(pattern, "Wspólnik", "Imiona", paragraph)
 
-            if paragraph.startswith("4.Numer KRS") and self.parsed_state["Wspólnicy"]:
-                pattern = r"[-]+|[*]+|[0-9]{10}$"
-                self.search_loop(pattern, "Wspólnik", "KRS", paragraph)
+                if paragraph.startswith("3.Numer PESEL/REGON") and self.parsed_state["Wspólnicy"]:
+                    pattern = r"[-]+|[0-9]{9,11}"
+                    self.search_loop(pattern, "Wspólnik", "PESEL/REGON", paragraph)
 
-            if paragraph.startswith("5.Posiadane przez wspólnika udziały"):
-                index = paragraphs.index(paragraph)
-                line_1 = paragraphs[index + 2].strip(" ")
-                line_2 = paragraphs[index + 3].strip(" ")
-                if line_2:
-                    self.datafields[f"Wspólnik {self.active}"]["Udziały"] = f"{line_1} {line_2}"
-                else:
-                    self.datafields[f"Wspólnik {self.active}"]["Udziały"] = f"{line_1}"
+                if paragraph.startswith("4.Numer KRS") and self.parsed_state["Wspólnicy"]:
+                    pattern = r"[-]+|[*]+|[0-9]{10}$"
+                    self.search_loop(pattern, "Wspólnik", "KRS", paragraph)
 
-            if paragraph == "ZARZĄD":
-                self.parsed_state["Wspólnicy"] = False  # Close "Wspólnicy" parsing block.
-                self.parsed_state["Zarząd"] = True  # Open "Zarząd" parsing block.
-                self.active = 0
+                if paragraph.startswith("5.Posiadane przez wspólnika udziały"):
+                    index = paragraphs.index(paragraph)
+                    line_1 = paragraphs[index + 2].strip(" ")
+                    line_2 = paragraphs[index + 3].strip(" ")
+                    if line_2:
+                        self.datafields[f"Wspólnik {self.active}"]["Udziały"] = f"{line_1} {line_2}"
+                    else:
+                        self.datafields[f"Wspólnik {self.active}"]["Udziały"] = f"{line_1}"
 
-            if paragraph.startswith("1.Nazwisko") and self.parsed_state["Zarząd"]:
-                self.active += 1
-                self.datafields[f"Zarząd {self.active}"] = {}
-                pattern = rf"^[A-Z{self.unicode}]+"
-                self.search_loop(pattern, "Zarząd", "Nazwisko/Nazwa", paragraph)
+                if paragraph == "ZARZĄD":
+                    self.parsed_state["Wspólnicy"] = False  # Close "Wspólnicy" parsing block.
+                    self.parsed_state["Zarząd"] = True  # Open "Zarząd" parsing block.
+                    self.active = 0
 
-            if paragraph.startswith("2.Imiona") and self.parsed_state["Zarząd"]:
-                pattern = rf"^[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
-                self.search_loop(pattern, "Zarząd", "Imiona", paragraph)
+                if paragraph.startswith("1.Nazwisko") and self.parsed_state["Zarząd"]:
+                    self.active += 1
+                    self.datafields[f"Zarząd {self.active}"] = {}
+                    pattern = rf"^[A-Z{self.unicode}]+"
+                    self.search_loop(pattern, "Zarząd", "Nazwisko/Nazwa", paragraph)
 
-            if paragraph.startswith("5.Funkcja w organie ") and self.parsed_state["Zarząd"]:
-                paragraph = paragraph.strip("5.Funkcja w organie reprezentującym ")
-                self.datafields[f"Zarząd {self.active}"]["Funkcja"] = paragraph
+                if paragraph.startswith("2.Imiona") and self.parsed_state["Zarząd"]:
+                    pattern = rf"^[A-Z{self.unicode}]+\s[A-Z{self.unicode}]+$|^[A-Z{self.unicode}]+$|^[*]+$"
+                    self.search_loop(pattern, "Zarząd", "Imiona", paragraph)
 
-            if paragraph.startswith("Rubryka 2 - Organ nadzoru"):
-                self.parsed_state["Zarząd"] = False  # Close "Zarząd" parsing block.
+                if paragraph.startswith("5.Funkcja w organie ") and self.parsed_state["Zarząd"]:
+                    paragraph = paragraph.strip("5.Funkcja w organie reprezentującym ")
+                    self.datafields[f"Zarząd {self.active}"]["Funkcja"] = paragraph
+
+                if paragraph.startswith("Rubryka 2 - Organ nadzoru"):
+                    self.parsed_state["Zarząd"] = False  # Close "Zarząd" parsing block.
+            except KeyError:
+                pass
         return self.datafields
 
 
 if __name__ == "__main__":  # DEBUG
-    parser = PdfParser(pdf_filename="odpis_aktualny_H&D.pdf")
+    parser = PdfParser(pdf_filename="odpis_aktualny_4.pdf")
     parser.load_pdf(env="venv", debug=(0, 500))
     datafields = parser.parse_paragraphs()
     for key in datafields:
         print(f"{key} : {datafields[key]}")
-
