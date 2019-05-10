@@ -59,12 +59,13 @@ class UserInterface:
     def help():
         print("> List of commands:\n"
               "- all - Parses all files in pdf directory.\n"
-              "- file 'filename' - Parses one pdf file. Eg. 'file odpis_aktualny_1.pdf'.\n"
+              "- parse 'filename' - Parses one pdf file. Eg. 'file odpis_aktualny_1.pdf'.\n"
               "- files - Prints all files in the pdf directory.\n"
+              "- help - Lists all commands."
               "- exit - Exits the application.")
 
     def ui_loop(self):
-        commands = {"all": self.parse_dir, "file": self.parse_file,
+        commands = {"all": self.parse_dir, "parse": self.parse_file,
                     "exit": exit, "files": self.files, "help": self.help}
         print(">>> Now running: Pdf-Docx\n> Enter 'help' for a list of commands.")
         while True:
