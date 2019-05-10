@@ -1,5 +1,6 @@
 from pdf_parser import PdfParser
 from docx_parser import DocxParser
+from sys import exit
 import os
 
 
@@ -10,10 +11,10 @@ class UserInterface:
 
     def parse_pdf(self, pdf_file):
         parser = PdfParser(pdf_file)
-        parser.load_pdf(env="venv")
+        parser.load_pdf()
         self.datafields = parser.parse_paragraphs()
 
-    def print_pdf_data(self):
+    def print_datafields(self):
         print(f">>> Parsing... '{self.filename}'\n"
               f"> Nazwa sądu: {self.datafields['Oznaczenie sądu']},\n"
               f"> Województwo: {self.datafields['Siedziba_Wojewodztwo']}, "
@@ -23,7 +24,7 @@ class UserInterface:
               f"\n> Numer KRS: {self.datafields['KRS']}, REGON: {self.datafields['REGON']},"
               f" NIP: {self.datafields['NIP']}")
 
-    def print_pdf_all(self):
+    def print_all_datafields(self):
         for key, value in self.datafields.items():
             print(f"{key} : {value}")
 
@@ -37,14 +38,44 @@ class UserInterface:
     def parse_dir():
         for pdf_file in os.listdir(os.path.join("pdf", "")):
             if pdf_file.endswith(".pdf"):
-                ui = UserInterface(pdf_file)
-                ui.parse_pdf(pdf_file)  # initiate parser object with pdf file
-                ui.print_pdf_data()
-                ui.parse_docx()
-
+                parser = UserInterface(pdf_file)
+                parser.parse_pdf(pdf_file)  # initiate parser object with pdf file
+                parser.print_datafields()
+                parser.parse_docx()
         input(f">  Finished!\n>  Press Enter to exit")
+
+    @staticmethod
+    def parse_file(pdf_file):
+        parser = UserInterface(pdf_file)
+        parser.parse_pdf(pdf_file)
+        parser.print_datafields()
+        parser.parse_docx()
+
+    @staticmethod
+    def files():
+        files = os.listdir(os.path.join("pdf", ""))
+        [print(file) for file in files]
+
+    def ui_loop(self):
+        commands = {"all": self.parse_dir, "file": self.parse_file, "exit": exit, "files": self.files}
+        print(">>> Now running: Pdf-Docx\n> To parse all files in pdf directory enter 'all',"
+              " to parse individual file in the directory enter 'file odpis_aktualny_1.pdf.\n"
+              "> Enter 'files' for all files in folder and 'exit' to exit.")
+        while True:
+            user_input = input("> Enter command:\n> ")
+            try:
+                try:
+                    filename = user_input.split(" ")
+                    command = filename[0]
+                    pdf_file = filename[1]
+                    commands[command](pdf_file)
+                except IndexError:
+                    command = user_input
+                    commands[command]()
+            except TypeError and KeyError:
+                print(">> Invalid command.")
 
 
 if __name__ == "__main__":
     ui = UserInterface()
-    ui.parse_dir()
+    ui.ui_loop()
