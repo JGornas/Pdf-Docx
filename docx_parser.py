@@ -1,4 +1,3 @@
-from pdf_parser import PdfParser
 from docx import Document
 from docx.shared import Pt
 from datetime import datetime
@@ -105,11 +104,3 @@ class DocxParser:
         os.makedirs("docx", exist_ok=True)
         self.document.save(os.path.join("docx", path))
 
-
-if __name__ == "__main__":
-    parser = PdfParser()
-    parser.load_pdf(env="venv")
-    datafields = parser.parse_paragraphs()
-    docx = DocxParser(datafields)
-    docx.parse_document()
-    docx.save_document()

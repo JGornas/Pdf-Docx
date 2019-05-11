@@ -188,7 +188,7 @@ class PdfParser:
         return self.datafields
 
 
-if __name__ == "__main__":  # DEBUG
+if __name__ == "__main__":  # DEBUG ONLY
     parser = PdfParser(pdf_filename="odpis_aktualny_4.pdf")
     parser.load_pdf(env="venv", debug=(0, 500))
     datafields = parser.parse_paragraphs()
