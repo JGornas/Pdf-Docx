@@ -190,11 +190,3 @@ class TestPdfParser(unittest.TestCase):
         self.assertEqual(datafields["Zarząd 3"]["Nazwisko/Nazwa"], "WOŹNIAK")
         self.assertEqual(datafields["Zarząd 3"]["Imiona"], "SŁAWOMIR STANISŁAW")
         self.assertEqual(datafields["Zarząd 3"]["Funkcja"], "WICEPREZES ZARZĄDU")
-
-
-
-
-
-
-
-
