@@ -3,7 +3,6 @@ from pdf_parser import PdfParser
 
 
 class TestPdfParser(unittest.TestCase):
-
     def test_pdf_1(self):
         parser = PdfParser()
         parser.pdf_filename = "odpis_aktualny_1.pdf"
