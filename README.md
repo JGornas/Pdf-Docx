@@ -18,12 +18,8 @@ Dependant directories docx and txt will be created upon first execution of the a
 
 Copy all 'odpis_aktualny.pdf' files that needs to be parsed into the pdf directory.
 
-Use ui_loop() method of UserInterface class.
-
-```python
-from ui import UserInterface
-ui = UserInterface()
-ui.ui_loop()
+```bash
+python ui.py
 ```
 
 Enter a command to access a function.
@@ -42,11 +38,9 @@ List of commands:
 - exit - Exits the application.
 
 
-App first extracts unicode text file from the pdf then loops through it looking for index or
-regex specific data.
-
-It then loops through the template.docx document file and fills the cells with new data.,
-saving new file under previous pdf file name.
+App extracts unicode text from the pdf and looks for an index or
+a regex specific data.
+Inserts and saves data to a template.docx file.
 
 
 ## License
